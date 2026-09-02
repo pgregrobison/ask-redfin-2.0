@@ -60,6 +60,7 @@ nonisolated struct ChatMessage: Identifiable, Codable, Sendable, Hashable {
     var tourDayRoute: TourDayRoute?
     var tourDayCurrentStopId: String?
     var isTourDaySummary: Bool
+    var isStaleChatPrompt: Bool
     var toolCalls: [ToolCallRecord]?
     var attachments: [ChatAttachment]?
 
@@ -78,6 +79,7 @@ nonisolated struct ChatMessage: Identifiable, Codable, Sendable, Hashable {
         tourDayRoute: TourDayRoute? = nil,
         tourDayCurrentStopId: String? = nil,
         isTourDaySummary: Bool = false,
+        isStaleChatPrompt: Bool = false,
         toolCalls: [ToolCallRecord]? = nil,
         attachments: [ChatAttachment]? = nil
     ) {
@@ -95,6 +97,7 @@ nonisolated struct ChatMessage: Identifiable, Codable, Sendable, Hashable {
         self.tourDayRoute = tourDayRoute
         self.tourDayCurrentStopId = tourDayCurrentStopId
         self.isTourDaySummary = isTourDaySummary
+        self.isStaleChatPrompt = isStaleChatPrompt
         self.toolCalls = toolCalls
         self.attachments = attachments
     }

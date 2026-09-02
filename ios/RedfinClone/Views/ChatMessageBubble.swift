@@ -8,6 +8,8 @@ struct ChatMessageBubble: View {
     let onFeedback: (MessageFeedback) -> Void
     let onShowOnMap: ([Listing], SearchFilters?) -> Void
     let onListingTap: (Listing) -> Void
+    var onNewChat: (() -> Void)? = nil
+    var onFlowConfirmed: (String) -> Void = { _ in }
     @Binding var carouselScrollPosition: String?
     var zoomNamespace: Namespace.ID?
     @Environment(\.colorScheme) private var colorScheme
@@ -65,13 +67,15 @@ struct ChatMessageBubble: View {
             }
 
             if let tourRequest = message.tourRequest {
-                TourSchedulerWidget(tourRequest: tourRequest)
-                    .environment(\.chatWidgetMessageID, message.id)
+                TourRequestButton(tourRequest: tourRequest, onCompleted: onFlowConfirmed)
             }
 
             if let mortgageRequest = message.mortgageRequest {
-                MortgagePrequalWidget(mortgageRequest: mortgageRequest)
-                    .environment(\.chatWidgetMessageID, message.id)
+                MortgageRequestButton(mortgageRequest: mortgageRequest, onCompleted: onFlowConfirmed)
+            }
+
+            if message.isStaleChatPrompt {
+                StaleChatWidget(onNewChat: onNewChat ?? {})
             }
 
             if let route = message.tourDayRoute {

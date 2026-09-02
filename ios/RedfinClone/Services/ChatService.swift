@@ -4,6 +4,7 @@ nonisolated enum DemoResponseType: Sendable {
     case listings(text: String, filters: SearchFilters, addNeighborhoods: Bool)
     case tour(text: String, request: TourRequest)
     case mortgage(text: String, request: MortgageRequest)
+    case staleChat(text: String)
     case fallback(text: String)
 }
 
@@ -13,6 +14,10 @@ class ChatService {
     func matchResponse(for input: String) -> DemoResponseType {
         let lower = input.lowercased()
 
+        if lower.contains("stale chat") {
+            return .staleChat(text: "It looks like this conversation has been quiet for a while. Want to pick up where you left off, or start fresh with something new?")
+        }
+
         if lower.containsAny(["home", "house", "apartment", "condo", "listing", "find", "search", "property", "place", "buy", "bed", "br", "studio"]) {
             let filters = extractFilters(from: lower)
             let addNbhd = detectsAddNeighborhood(in: lower) && filters.neighborhoods != nil
@@ -20,9 +25,13 @@ class ChatService {
             return .listings(text: text, filters: filters, addNeighborhoods: addNbhd)
         }
 
-        if lower.containsAny(["mortgage", "prequalified", "prequalify", "pre-qualified", "afford", "loan", "financing"]) {
+        if lower.containsAny([
+            "mortgage", "prequalified", "prequalify", "pre-qualified", "pre qualified", "preqalified",
+            "preapproved", "pre-approved", "pre approved", "get approved",
+            "afford", "loan", "financing", "my rate", "interest rate", "estimate my rate"
+        ]) {
             let listingId = extractListingId(from: lower)
-            let text = "Let's get you prequalified! I just need a few details to estimate what you can afford."
+            let text = "Curious what you could afford? I can get you prequalified in a couple minutes."
             let request = MortgageRequest(listingId: listingId)
             return .mortgage(text: text, request: request)
         }
@@ -32,9 +41,9 @@ class ChatService {
             let listingId = extractListingId(from: lower)
             let text: String
             if let address {
-                text = "Let's get you scheduled for a tour of \(address)! Pick a day and time that works for you."
+                text = "Ready to see \(address) in person?"
             } else {
-                text = "Let's get you scheduled! Pick a day and time that works for you."
+                text = "Ready to see this home in person?"
             }
             let request = TourRequest(listingId: listingId, address: address)
             return .tour(text: text, request: request)

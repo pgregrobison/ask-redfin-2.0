@@ -22,7 +22,7 @@ nonisolated enum SortOption: String, CaseIterable, Sendable {
 @MainActor
 class ListingsViewModel {
     var debugSettings: DebugSettings?
-    var listings: [Listing] = MockData.listings
+    var listings: [Listing] = DemoFixtures.isEnabled ? MockData.listings + [DemoFixtures.bookshelfListing] : MockData.listings
     var savedListingIDs: Set<String> = []
     var seenListingIDs: Set<String> = []
     var selectedListing: Listing?

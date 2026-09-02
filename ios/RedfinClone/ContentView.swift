@@ -20,6 +20,9 @@ struct ContentView: View {
     @State private var showLocationMenu: Bool = false
     @State private var chatDetent: PresentationDetent = .large
     @State private var showDebugPanel: Bool = false
+    @State private var showSplash: Bool = false
+    @State private var splashChromeOpacity: Double = 1
+    @State private var accessoryBarMidY: CGFloat = 0
     @Environment(\.scenePhase) private var scenePhase
     @Namespace private var zoomNamespace
 
@@ -29,10 +32,26 @@ struct ContentView: View {
             .overlay(alignment: .top) {
                 if selectedTab == .find && navigationPath.isEmpty {
                     FindPillOverlay(viewModel: viewModel, showLocationMenu: $showLocationMenu)
+                        .opacity(splashChromeOpacity)
                 }
+            }
+            .fullScreenCover(isPresented: $showSplash) {
+                SplashScreenView(accessoryMidY: $accessoryBarMidY) {
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        splashChromeOpacity = 1
+                    }
+                }
+                .ignoresSafeArea()
             }
         .tint(.primary)
         .onAppear {
+            if !UserDefaults.standard.bool(forKey: "hasSeenIntro") {
+                UserDefaults.standard.set(true, forKey: "hasSeenIntro")
+                selectedTab = .find
+                splashChromeOpacity = 0
+                showSplash = true
+            }
+
             viewModel.debugSettings = debugSettings
             chatViewModel.debugSettings = debugSettings
             chatViewModel.currentFindFiltersProvider = { [weak viewModel] in
@@ -43,8 +62,15 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showDebugPanel) {
-            DebugPanelView(settings: debugSettings)
-                .presentationDetents([.medium, .large])
+            DebugPanelView(settings: debugSettings, onPlaySplash: {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(350))
+                    selectedTab = .find
+                    splashChromeOpacity = 0
+                    showSplash = true
+                }
+            })
+            .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $viewModel.showChat, onDismiss: {
             let nbhds = pendingNeighborhoodFocus
@@ -233,6 +259,11 @@ struct ContentView: View {
             AskRedfinAccessoryBar {
                 chatViewModel.focusInputOnAppear = true
                 viewModel.showChat = true
+            }
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                proxy.frame(in: .global).midY
+            } action: { midY in
+                if midY > 0 { accessoryBarMidY = midY }
             }
         }
         .ignoresSafeArea(.keyboard)

@@ -112,43 +112,62 @@ struct AskRedfinView: View {
         .tint(.primary)
     }
 
+    private var isEmptyChat: Bool {
+        chatViewModel.activeMessages.filter { $0.role == .user }.isEmpty
+    }
+
     private var messageList: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: Theme.Spacing.md) {
                     Color.clear.frame(height: 0)
-                    chatTitleHeader
-                    ForEach(chatViewModel.activeMessages) { message in
-                        ChatMessageBubble(
-                            message: message,
-                            allListings: allListings,
-                            savedListingIDs: savedListingIDs,
-                            onToggleSave: onToggleSave,
-                            onFeedback: { feedback in
-                                chatViewModel.setFeedback(feedback, for: message.id)
-                            },
-                            onShowOnMap: onShowOnMap,
-                            onListingTap: onListingTap,
-                            carouselScrollPosition: Binding(
-                                get: { chatViewModel.carouselScrollPositions[message.id] },
-                                set: { chatViewModel.carouselScrollPositions[message.id] = $0 }
-                            ),
-                            zoomNamespace: zoomNamespace
-                        )
-                        .id(message.id)
-                    }
 
-                    ThinkingIndicator(label: chatViewModel.thinkingState.label)
-                        .opacity(chatViewModel.thinkingState != .none ? 1 : 0)
-                        .frame(height: chatViewModel.thinkingState != .none ? nil : 0)
-                        .clipped()
-                        .animation(.easeInOut(duration: 0.25), value: chatViewModel.thinkingState)
-                        .id("thinking")
+                    if isEmptyChat {
+                        NewChatEmptyStateView(
+                            lastFilters: chatViewModel.lastSessionFilters,
+                            onSuggestionTap: { prompt in
+                                chatViewModel.inputText = prompt
+                                chatViewModel.sendMessage()
+                            }
+                        )
+                        .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                    } else {
+                        chatTitleHeader
+                        ForEach(chatViewModel.activeMessages) { message in
+                            ChatMessageBubble(
+                                message: message,
+                                allListings: allListings,
+                                savedListingIDs: savedListingIDs,
+                                onToggleSave: onToggleSave,
+                                onFeedback: { feedback in
+                                    chatViewModel.setFeedback(feedback, for: message.id)
+                                },
+                                onShowOnMap: onShowOnMap,
+                                onListingTap: onListingTap,
+                                onNewChat: { chatViewModel.createNewThread() },
+                                onFlowConfirmed: { text in chatViewModel.postFlowConfirmation(text) },
+                                carouselScrollPosition: Binding(
+                                    get: { chatViewModel.carouselScrollPositions[message.id] },
+                                    set: { chatViewModel.carouselScrollPositions[message.id] = $0 }
+                                ),
+                                zoomNamespace: zoomNamespace
+                            )
+                            .id(message.id)
+                        }
+
+                        ThinkingIndicator(label: chatViewModel.thinkingState.label)
+                            .opacity(chatViewModel.thinkingState != .none ? 1 : 0)
+                            .frame(height: chatViewModel.thinkingState != .none ? nil : 0)
+                            .clipped()
+                            .animation(.easeInOut(duration: 0.25), value: chatViewModel.thinkingState)
+                            .id("thinking")
+                    }
 
                     Color.clear
                         .frame(height: currentBottomSpacerHeight)
                         .id("bottom-spacer")
                 }
+                .animation(.easeInOut(duration: 0.25), value: isEmptyChat)
                 .padding(.top, Theme.Spacing.xs)
                 .padding(.bottom, Theme.Spacing.md)
             }
@@ -166,6 +185,12 @@ struct AskRedfinView: View {
                    let savedId = chatViewModel.scrollPositions[threadId] {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                         proxy.scrollTo(savedId, anchor: .bottom)
+                    }
+                } else if let lastId = chatViewModel.activeMessages.last?.id {
+                    // No saved scroll position yet (e.g. a freshly seeded demo
+                    // thread) — jump straight to the bottom of the thread.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        proxy.scrollTo(lastId, anchor: .bottom)
                     }
                 }
             }

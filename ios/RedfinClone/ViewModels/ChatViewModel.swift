@@ -61,12 +61,32 @@ class ChatViewModel {
         activeThread?.messages ?? []
     }
 
+    var lastSessionFilters: SearchFilters? {
+        for thread in threads where thread.id != activeThreadId {
+            if let filters = thread.messages.compactMap({ $0.searchFilters }).last {
+                return filters
+            }
+        }
+        return nil
+    }
+
     var isTourDayThread: Bool {
         activeThread?.isTourDay ?? false
     }
 
     init() {
         UserDefaults.standard.removeObject(forKey: "chatThreads")
+
+        if DemoFixtures.isEnabled {
+            // Demo/launch-video override: always open into the fixed seed
+            // conversation instead of restoring from UserDefaults. Flip
+            // DemoFixtures.isEnabled to false (or delete DemoFixtures.swift)
+            // to return to normal persisted-thread behavior.
+            threads = [DemoFixtures.seedThread]
+            activeThreadId = DemoFixtures.seedThread.id
+            return
+        }
+
         loadThreads()
         if threads.isEmpty {
             createNewThread()
@@ -296,6 +316,10 @@ class ChatViewModel {
         saveThreads()
     }
 
+    func postFlowConfirmation(_ text: String) {
+        Task { await streamAssistantMessage(text) }
+    }
+
     func setFeedback(_ feedback: MessageFeedback, for messageId: String) {
         guard let ti = threads.firstIndex(where: { $0.id == activeThreadId }),
               let mi = threads[ti].messages.firstIndex(where: { $0.id == messageId }) else { return }
@@ -429,6 +453,7 @@ class ChatViewModel {
         var searchFilters: SearchFilters?
         var tourReq: TourRequest?
         var mortgageReq: MortgageRequest?
+        var isStaleChatWidget = false
 
         var addNbhd = false
         switch response {
@@ -447,6 +472,10 @@ class ChatViewModel {
         case .mortgage(let text, let request):
             responseText = text
             mortgageReq = request
+
+        case .staleChat(let text):
+            responseText = text
+            isStaleChatWidget = true
 
         case .fallback(let text):
             responseText = text
@@ -489,6 +518,10 @@ class ChatViewModel {
 
         if let mortgageReq {
             threads[ti].messages[mi].mortgageRequest = mortgageReq
+        }
+
+        if isStaleChatWidget {
+            threads[ti].messages[mi].isStaleChatPrompt = true
         }
 
         finalizeMessage(msgId)

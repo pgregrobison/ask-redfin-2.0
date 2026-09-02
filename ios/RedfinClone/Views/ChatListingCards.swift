@@ -20,29 +20,46 @@ struct ChatListingCards: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            ScrollView(.horizontal) {
-                HStack(spacing: Theme.Spacing.sm) {
-                    ForEach(matchedListings) { listing in
-                        Button { onListingTap(listing) } label: {
-                            HomeCard(
-                                listing: listing,
-                                size: .compact(width: 300),
-                                isSaved: savedListingIDs.contains(listing.id),
-                                badge: listing.primaryBadge,
-                                onToggleSave: { onToggleSave(listing) }
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .id(listing.id)
-                        .matchedTransitionSourceIfAvailable(id: listing.id, in: zoomNamespace)
-                    }
+            if matchedListings.count == 1, let listing = matchedListings.first {
+                // A single match renders as one prominent full-width card
+                // instead of a narrow carousel card with empty space beside it.
+                Button { onListingTap(listing) } label: {
+                    HomeCard(
+                        listing: listing,
+                        size: .medium,
+                        isSaved: savedListingIDs.contains(listing.id),
+                        badge: listing.primaryBadge,
+                        onToggleSave: { onToggleSave(listing) }
+                    )
                 }
-                .scrollTargetLayout()
+                .buttonStyle(.plain)
+                .padding(.horizontal, Theme.Spacing.md)
+                .matchedTransitionSourceIfAvailable(id: listing.id, in: zoomNamespace)
+            } else {
+                ScrollView(.horizontal) {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        ForEach(matchedListings) { listing in
+                            Button { onListingTap(listing) } label: {
+                                HomeCard(
+                                    listing: listing,
+                                    size: .compact(width: 300),
+                                    isSaved: savedListingIDs.contains(listing.id),
+                                    badge: listing.primaryBadge,
+                                    onToggleSave: { onToggleSave(listing) }
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .id(listing.id)
+                            .matchedTransitionSourceIfAvailable(id: listing.id, in: zoomNamespace)
+                        }
+                    }
+                    .scrollTargetLayout()
+                }
+                .scrollTargetBehavior(.viewAligned)
+                .scrollPosition(id: $scrolledListingID)
+                .contentMargins(.horizontal, Theme.Spacing.md)
+                .scrollIndicators(.hidden)
             }
-            .scrollTargetBehavior(.viewAligned)
-            .scrollPosition(id: $scrolledListingID)
-            .contentMargins(.horizontal, Theme.Spacing.md)
-            .scrollIndicators(.hidden)
 
             if !matchedListings.isEmpty {
                 Button {

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DebugPanelView: View {
     @Bindable var settings: DebugSettings
+    var onPlaySplash: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -69,6 +70,15 @@ struct DebugPanelView: View {
                     Text("Controls how chat interacts with the map when searching for homes.")
                 }
 
+                Section {
+                    Button("Play Intro Animation") {
+                        dismiss()
+                        onPlaySplash()
+                    }
+                    .foregroundStyle(Theme.Colors.brandRed)
+                } header: {
+                    Text("Launch Experience")
+                }
             }
             .navigationTitle("Debug")
             .navigationBarTitleDisplayMode(.inline)
