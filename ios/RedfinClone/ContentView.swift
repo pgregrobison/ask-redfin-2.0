@@ -17,7 +17,6 @@ struct ContentView: View {
     @State private var stickyMinimized: Bool = false
     @State private var pendingMapListings: [Listing]?
     @State private var pendingNeighborhoodFocus: [String]?
-    @State private var showLocationMenu: Bool = false
     @State private var chatDetent: PresentationDetent = .large
     @State private var showDebugPanel: Bool = false
     @State private var showSplash: Bool = false
@@ -35,14 +34,14 @@ struct ContentView: View {
                         if debugSettings.findChromeStyle == .searchBar {
                             FindTopBar(viewModel: viewModel, onAskTap: { viewModel.showChat = true })
                         } else {
-                            FindPillOverlay(viewModel: viewModel, showLocationMenu: $showLocationMenu)
+                            FindPillBar(viewModel: viewModel)
                         }
                     }
                     .opacity(splashChromeOpacity)
                     .onGeometryChange(for: CGFloat.self) { proxy in
-                        proxy.frame(in: .global).minY
-                    } action: { minY in
-                        viewModel.topChromeMinY = minY
+                        proxy.frame(in: .global).maxY
+                    } action: { maxY in
+                        viewModel.topChromeMaxY = maxY
                     }
                 }
             }
@@ -214,7 +213,7 @@ struct ContentView: View {
                 NavigationStack(path: $navigationPath) {
                     FindView(viewModel: viewModel, zoomNamespace: zoomNamespace, isActive: selectedTab == .find, onProfileTap: {}, onListingTap: { listing in
                         navigateToListing(listing)
-                    }, showShimmer: mapShimmerActive, accessoryMode: true, hideProfileButton: true, hideListToggle: debugSettings.findChromeStyle == .searchBar)
+                    }, showShimmer: mapShimmerActive, accessoryMode: true, hideProfileButton: true, hideListToggle: true)
                     .navigationDestination(for: Listing.self) { listing in
                         listingDetail(for: listing)
                     }
@@ -303,7 +302,7 @@ struct ContentView: View {
         ZStack {
             FindView(viewModel: viewModel, zoomNamespace: zoomNamespace, isActive: selectedTab == .find, onProfileTap: { showDebugPanel = true }, onListingTap: { listing in
                 navigateToListing(listing)
-            }, showShimmer: mapShimmerActive, hideListToggle: debugSettings.findChromeStyle == .searchBar)
+            }, showShimmer: mapShimmerActive, hideProfileButton: debugSettings.findChromeStyle == .classic, hideListToggle: true)
             .animation(.easeInOut(duration: 0.25), value: mapShimmerActive)
             .opacity(selectedTab == .find ? 1 : 0)
             .allowsHitTesting(selectedTab == .find)
@@ -323,6 +322,11 @@ struct ContentView: View {
             MyHomeView(isActive: selectedTab == .myHome, onProfileTap: { showDebugPanel = true }, debugSettings: debugSettings, setupDraft: myHomeDraft)
                 .opacity(selectedTab == .myHome ? 1 : 0)
                 .allowsHitTesting(selectedTab == .myHome)
+
+            // Its gear opens the debug panel (Find's profile button gave way to the pill bar).
+            MyRedfinView(isActive: selectedTab == .myRedfin, onProfileTap: { showDebugPanel = true })
+                .opacity(selectedTab == .myRedfin ? 1 : 0)
+                .allowsHitTesting(selectedTab == .myRedfin)
         }
     }
 

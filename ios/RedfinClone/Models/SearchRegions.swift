@@ -116,6 +116,24 @@ nonisolated final class SearchRegions: Sendable {
         return polys.isEmpty && matched.isEmpty ? listings : matched
     }
 
+    /// Adding a place drops any current area it sits inside or that sits
+    /// inside it ("Ballard" replaces "Seattle, WA"), like the prototype's `planLoc`.
+    func adding(_ name: String, to locations: [String]) -> [String] {
+        guard !locations.contains(name) else { return locations }
+        guard let new = polygons[name] else { return locations + [name] }
+        return locations.filter { l in
+            guard let p = polygons[l] else { return true }
+            return !(new.isInside(p) || p.isInside(new))
+        } + [name]
+    }
+
+    /// Bounding box of the given areas as (minLat, maxLat, minLng, maxLng).
+    func bounds(of locations: [String]) -> (minLat: Double, maxLat: Double, minLng: Double, maxLng: Double)? {
+        let polys = locations.compactMap { polygons[$0] }
+        guard !polys.isEmpty else { return nil }
+        return (polys.map(\.minLat).min()!, polys.map(\.maxLat).max()!, polys.map(\.minLng).min()!, polys.map(\.maxLng).max()!)
+    }
+
     /// The smallest area that contains all of `locations`, for "show more homes".
     func widerArea(than locations: [String]) -> String? {
         let current = locations.compactMap { polygons[$0] }

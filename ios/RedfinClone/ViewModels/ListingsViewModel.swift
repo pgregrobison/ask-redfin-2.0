@@ -10,14 +10,6 @@ nonisolated enum ListingStatus: String, CaseIterable, Sendable, Identifiable {
     var id: String { rawValue }
 }
 
-nonisolated enum SortOption: String, CaseIterable, Sendable {
-    case recommended = "Recommended"
-    case priceLowToHigh = "Price Low→High"
-    case priceHighToLow = "Price High→Low"
-    case newest = "Newest"
-    case sqft = "Sq Ft"
-}
-
 @Observable
 @MainActor
 class ListingsViewModel {
@@ -29,8 +21,35 @@ class ListingsViewModel {
     /// The prototype's search: area, filters, criteria, refinements, sort.
     /// Saved as the current session whenever it changes.
     var search = SearchState.initial {
-        didSet { if search != oldValue { queueMemorySave() } }
+        didSet {
+            guard search != oldValue else { return }
+            refreshResults()
+            queueMemorySave()
+            if search.locations != oldValue.locations { fitLocations(search.locations) }
+        }
     }
+
+    /// Ranked results for the current search, recomputed when it changes.
+    private(set) var rankedResults: [RankedHome] = []
+    /// Homes that get a full price pill on the map (the top 100 by rank); the rest are dots.
+    private(set) var pillListingIDs: Set<String> = []
+    /// Analysis values for the visible homes, normalized 0–1 for the pin ramp.
+    private(set) var analysisPositions: [String: Double] = [:]
+    private(set) var analysisRange: (min: Double, max: Double)?
+
+    enum MapStyleOption: String, CaseIterable, Identifiable {
+        case streets = "Streets", light = "Light", dark = "Dark"
+        var id: String { rawValue }
+    }
+    var mapStyle: MapStyleOption = .streets
+    var isMap3D = false {
+        didSet { if isMap3D != oldValue { applyMapPitch() } }
+    }
+
+    /// Homes in the selected-home carousel: the tapped home plus its 9 nearest.
+    private(set) var carouselListings: [Listing] = []
+    /// How many list cards to show (pages of 24).
+    var listPageCount = 1
     /// Snapshots taken before each undoable change, newest last.
     private(set) var undoStack: [SearchState.Snapshot] = []
     let memoryStore = SearchMemoryStore()
@@ -44,18 +63,16 @@ class ListingsViewModel {
     private(set) var dismissingListing: Listing?
     var isCardVisible: Bool = false
     private var dismissTask: Task<Void, Never>?
-    var sortOption: SortOption = .recommended
     var listingStatus: ListingStatus = .forSale
     var showListView: Bool = false
     var showChat: Bool = false
     var locationName: String = "Seattle"
 
-    /// Top edge of the Find tab's floating toolbar (`FindPillOverlay` or
+    /// Bottom edge of the Find tab's floating toolbar (`FindPillBar` or
     /// `FindTopBar`, whichever is active) in `.global` coordinate space, set by
-    /// `ContentView`. `FindMapView`'s map control stack reads this to
-    /// top-align itself with the toolbar regardless of which style is active
-    /// or how deep the map sits inside its own safe-area/nav-bar context.
-    var topChromeMinY: CGFloat = 0
+    /// `ContentView`. `FindMapView`'s map controls and the list view sit below
+    /// it regardless of how deep they are inside their own safe-area context.
+    var topChromeMaxY: CGFloat = 0
 
     // Legacy filter API used by the current filter sheet, location menu and
     // chat; each one reads and writes `search`.
@@ -104,15 +121,39 @@ class ListingsViewModel {
         span: MKCoordinateSpan(latitudeDelta: 0.12, longitudeDelta: 0.12)
     ))
 
-    /// Results ranked by the search's sort, with criteria matches ("4/5").
-    var rankedResults: [RankedHome] {
-        SearchEngine.results(listings, search)
+    /// Homes on the map in rank order: the search area filtered by filters,
+    /// must-haves, dealbreakers and refinements.
+    var filteredListings: [Listing] { rankedResults.map(\.listing) }
+
+    /// How many homes a draft search would show ("Show N homes").
+    func count(for draft: SearchState) -> Int { SearchEngine.count(listings, draft) }
+
+    var activeAnalysis: HomeAnalysis? {
+        guard let a = search.analysis, a.isOn else { return nil }
+        return HomeAnalyses.all[a.key]
     }
 
-    /// Homes on the map: the search area filtered by filters, must-haves,
-    /// dealbreakers and refinements.
-    var filteredListings: [Listing] {
-        SearchEngine.visible(listings, search)
+    private func refreshResults() {
+        rankedResults = SearchEngine.results(listings, search)
+        // Pills go to the top 100 by match, whatever the list sort.
+        var bestFirst = search
+        bestFirst.sort = .match
+        let top = search.sort == .match ? rankedResults : SearchEngine.results(listings, bestFirst)
+        pillListingIDs = Set(top.prefix(100).map(\.id))
+
+        if let a = activeAnalysis {
+            let values = rankedResults.compactMap { r in a.value(r.listing).map { (r.id, $0) } }
+            let lo = values.map(\.1).min() ?? 0, hi = values.map(\.1).max() ?? 0
+            analysisRange = values.isEmpty ? nil : (lo, hi)
+            analysisPositions = Dictionary(uniqueKeysWithValues: values.map { ($0.0, hi > lo ? ($0.1 - lo) / (hi - lo) : 0) })
+        } else {
+            analysisRange = nil
+            analysisPositions = [:]
+        }
+        listPageCount = 1
+        if let selected = selectedListing, !rankedResults.contains(where: { $0.id == selected.id }) {
+            dismissOverlay()
+        }
     }
 
     /// Criteria matches for one home under the current search.
@@ -233,6 +274,11 @@ class ListingsViewModel {
     }
 
     func fitNeighborhoods(_ names: [String], sheetFraction: CGFloat = 0) {
+        let canonical = names.map { SearchRegions.shared.canonicalName($0) }
+        if sheetFraction == 0, SearchRegions.shared.bounds(of: canonical) != nil {
+            fitLocations(canonical)
+            return
+        }
         let regions = names.compactMap { NeighborhoodBounds.region(for: $0) }
         guard !regions.isEmpty else { return }
         var minLat = Double.greatestFiniteMagnitude
@@ -271,19 +317,47 @@ class ListingsViewModel {
         }
     }
 
-    var sortedListings: [Listing] {
-        switch sortOption {
-        case .recommended:
-            // Best match: most criteria matched first.
-            return rankedResults.map(\.listing)
-        case .priceLowToHigh:
-            return filteredListings.sorted { $0.price < $1.price }
-        case .priceHighToLow:
-            return filteredListings.sorted { $0.price > $1.price }
-        case .newest:
-            return filteredListings.sorted { $0.daysOnMarket < $1.daysOnMarket }
-        case .sqft:
-            return filteredListings.sorted { $0.sqft > $1.sqft }
+    // MARK: - Map camera helpers
+
+    /// Fits the camera to the search areas (falls back to the results).
+    func fitLocations(_ names: [String]) {
+        guard let b = SearchRegions.shared.bounds(of: names) else {
+            fitListings(filteredListings)
+            return
+        }
+        setCamera(minLat: b.minLat, maxLat: b.maxLat, minLon: b.minLng, maxLon: b.maxLng, padding: 1.1, duration: 0.6)
+    }
+
+    private func setCamera(minLat: Double, maxLat: Double, minLon: Double, maxLon: Double, padding: Double, duration: Double) {
+        let pinLatDelta = max((maxLat - minLat) * padding, 0.01)
+        let lonDelta = max((maxLon - minLon) * padding, 0.01)
+        let visibleFraction = max(1.0 - headerFraction, 0.15)
+        let latDelta = pinLatDelta / visibleFraction
+        let center = CLLocationCoordinate2D(latitude: (minLat + maxLat) / 2 + headerFraction / 2 * latDelta, longitude: (minLon + maxLon) / 2)
+        let span = MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lonDelta)
+        isAnimatingCamera = true
+        withAnimation(.easeInOut(duration: duration)) {
+            mapPosition = cameraPosition(center: center, span: span)
+        }
+        currentCenter = center
+        currentSpan = span
+        Task {
+            try? await Task.sleep(for: .milliseconds(Int(duration * 1000) + 50))
+            isAnimatingCamera = false
+        }
+    }
+
+    /// A region, or a pitched camera over the same area when 3D is on.
+    private func cameraPosition(center: CLLocationCoordinate2D, span: MKCoordinateSpan) -> MapCameraPosition {
+        guard isMap3D else { return .region(MKCoordinateRegion(center: center, span: span)) }
+        // ~111 km per degree of latitude; distance that shows the span at 45° pitch.
+        let distance = span.latitudeDelta * 111_000 * 1.6
+        return .camera(MapCamera(centerCoordinate: center, distance: distance, heading: -12, pitch: 45))
+    }
+
+    private func applyMapPitch() {
+        withAnimation(.easeInOut(duration: 0.6)) {
+            mapPosition = cameraPosition(center: currentCenter, span: currentSpan)
         }
     }
 
@@ -325,6 +399,9 @@ class ListingsViewModel {
 
     init() {
         loadSavedListings()
+        // Open on the prototype's scenario (Phase 8 types it in as the intro).
+        search = .introScenario
+        refreshResults()
         // Keep last session aside for "Pick up where I left off" (as the
         // prototype does), and re-seed the demo chats.
         if let previous = memoryStore.loadCurrent() {
@@ -360,6 +437,9 @@ class ListingsViewModel {
             return
         }
         let wasCardVisible = isCardVisible && selectedListing != nil
+        if !wasCardVisible || !carouselListings.contains(where: { $0.id == listing.id }) {
+            carouselListings = nearestListings(to: listing)
+        }
         dismissTask?.cancel()
         dismissTask = nil
         dismissingListing = nil
@@ -380,6 +460,26 @@ class ListingsViewModel {
                 isCardVisible = true
             }
         }
+    }
+
+    /// The tapped home plus its 9 nearest results, nearest first.
+    private func nearestListings(to listing: Listing) -> [Listing] {
+        let origin = CLLocation(latitude: listing.latitude, longitude: listing.longitude)
+        let others = filteredListings
+            .filter { $0.id != listing.id }
+            .map { ($0, CLLocation(latitude: $0.latitude, longitude: $0.longitude).distance(from: origin)) }
+            .sorted { $0.1 < $1.1 }
+            .prefix(9)
+            .map(\.0)
+        return [listing] + others
+    }
+
+    /// Swiping the carousel selects that home and pans the map to it.
+    func selectFromCarousel(_ listing: Listing) {
+        guard selectedListing?.id != listing.id else { return }
+        selectedListing = listing
+        markSeen(listing)
+        panToListing(listing)
     }
 
     private let headerFraction: CGFloat = 0.12
@@ -477,7 +577,7 @@ class ListingsViewModel {
             // Capture user pans/zooms into the source-of-truth so the map
             // restores to the same view when FindMapView is recreated
             // (e.g. after switching to list view and back).
-            mapPosition = .region(region)
+            mapPosition = cameraPosition(center: region.center, span: region.span)
         }
         locationService.isTrackingUser = false
     }

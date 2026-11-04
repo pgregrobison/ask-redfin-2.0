@@ -94,6 +94,15 @@ nonisolated struct SearchState: Codable, Hashable, Sendable {
 
     static let initial = SearchState()
 
+    /// The prototype's opening request: "Homes in Seattle under $1.3M with
+    /// natural light, a finished basement, a large yard, a home office and a quiet street".
+    static let introScenario: SearchState = {
+        var s = SearchState()
+        s.filters.maxPrice = 1_300_000
+        s.criteria = HomeCatalog.knownCriteria
+        return s
+    }()
+
     func mode(of criterion: String) -> CriterionMode { modes[criterion] ?? .nice }
 
     /// Criteria that rank: on, and not dealbreakers.
@@ -103,6 +112,60 @@ nonisolated struct SearchState: Codable, Hashable, Sendable {
 
     /// Criterion pills + structured filters, for the Filters badge.
     var activeFilterCount: Int { criteria.count + filters.activeCount }
+
+    // MARK: Labels (the prototype's pill and heading copy)
+
+    /// "Seattle, WA" or "Ballard +2".
+    var locationPillLabel: String {
+        locations.count > 1 ? "\(locations[0]) +\(locations.count - 1)" : (locations.first ?? SearchRegions.defaultLocation)
+    }
+
+    /// "Seattle, WA", "Ballard & Fremont" or "3 areas".
+    var locationPhrase: String {
+        switch locations.count {
+        case 0, 1: locations.first ?? SearchRegions.defaultLocation
+        case 2: "\(locations[0]) & \(locations[1])"
+        default: "\(locations.count) areas"
+        }
+    }
+
+    /// "Up to $1.3M", "$800K–$1.3M", "$1M+"; nil when no price is set.
+    var priceLabel: String? {
+        let f = filters
+        if f.minPrice > 0 && f.maxPrice > 0 { return "\(Self.money(f.minPrice))–\(Self.money(f.maxPrice))" }
+        if f.maxPrice > 0 { return "Up to \(Self.money(f.maxPrice))" }
+        if f.minPrice > 0 { return "\(Self.money(f.minPrice))+" }
+        return nil
+    }
+
+    /// " under $1.3M", " over $1M", " from $800K to $1.3M" for headings.
+    var pricePhrase: String {
+        let f = filters
+        if f.minPrice > 0 && f.maxPrice > 0 { return " from \(Self.money(f.minPrice)) to \(Self.money(f.maxPrice))" }
+        if f.maxPrice > 0 { return " under \(Self.money(f.maxPrice))" }
+        if f.minPrice > 0 { return " over \(Self.money(f.minPrice))" }
+        return ""
+    }
+
+    /// "3+ bd, 2+ ba"; nil when neither is set.
+    var roomsLabel: String? {
+        let parts = [filters.beds > 0 ? "\(filters.beds)+ bd" : nil,
+                     filters.baths > 0 ? "\(filters.baths.formatted())+ ba" : nil].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: ", ")
+    }
+
+    /// Pill label for a criterion: "Natural light", or "No busy street" for dealbreakers.
+    func pillLabel(for criterion: String) -> String {
+        let cap = criterion.prefix(1).uppercased() + criterion.dropFirst()
+        return mode(of: criterion) == .deal ? "No \(criterion)" : cap
+    }
+
+    /// The prototype's `fmtK`: $1.3M, $1.25M, $950K.
+    static func money(_ v: Int) -> String {
+        v >= 1_000_000
+            ? "$\((Double(v) / 1_000_000).formatted(.number.precision(.fractionLength(0...2)).grouping(.never)))M"
+            : "$\(v / 1000)K"
+    }
 
     // MARK: Undo
 
@@ -219,7 +282,21 @@ nonisolated enum SearchEngine {
         }
         let tie = { (a: RankedHome, b: RankedHome) in (order[a.id] ?? 0) < (order[b.id] ?? 0) }
         switch s.sort {
-        case .match, .analysis:
+        case .analysis:
+            // Lowest value first (closest, cheapest per sq ft, best transit); no value last.
+            if let a = s.analysis.flatMap({ HomeAnalyses.all[$0.key] }) {
+                let v = Dictionary(uniqueKeysWithValues: ranked.map { ($0.id, a.value($0.listing)) })
+                return ranked.sorted { x, y in
+                    switch (v[x.id] ?? nil, v[y.id] ?? nil) {
+                    case let (p?, q?): return p != q ? p < q : tie(x, y)
+                    case (.some, nil): return true
+                    case (nil, .some): return false
+                    case (nil, nil): return tie(x, y)
+                    }
+                }
+            }
+            fallthrough
+        case .match:
             return ranked.sorted { $0.matched.count != $1.matched.count ? $0.matched.count > $1.matched.count : tie($0, $1) }
         case .priceLow:
             return ranked.sorted { $0.listing.price != $1.listing.price ? $0.listing.price < $1.listing.price : tie($0, $1) }

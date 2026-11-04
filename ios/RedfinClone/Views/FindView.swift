@@ -39,11 +39,6 @@ struct FindView: View {
                         }
                     }
                 }
-                if viewModel.showListView {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        sortMenu
-                    }
-                }
                 if !hideProfileButton {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button { onProfileTap() } label: {
@@ -64,25 +59,4 @@ struct FindView: View {
             askRedfinContext.context = viewModel.selectedListing != nil ? .mapCard : .map
         }
     }
-
-    private var sortMenu: some View {
-        Menu {
-            ForEach(SortOption.allCases, id: \.self) { option in
-                Button {
-                    viewModel.sortOption = option
-                } label: {
-                    HStack {
-                        Text(option.rawValue)
-                        if viewModel.sortOption == option {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
-            }
-        } label: {
-            Image(systemName: "arrow.up.arrow.down")
-                .font(.system(size: Theme.IconSize.medium, weight: .semibold))
-        }
-    }
-
 }
