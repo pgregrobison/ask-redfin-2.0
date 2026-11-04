@@ -17,7 +17,10 @@ struct FindPillBar: View {
     var body: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 8) {
+                // Outside the glass group so its count badge draws above the pills.
                 filtersButton
+                NovaGlassGroup(spacing: 8) {
+                HStack(spacing: 8) {
                 pill(s.locationPillLabel, chevron: showLocation) { showLocation = true }
                     .popover(isPresented: $showLocation) {
                         LocationSearchPopover(viewModel: viewModel)
@@ -55,6 +58,8 @@ struct FindPillBar: View {
                 if let a = s.analysis, let def = HomeAnalyses.all[a.key] {
                     analysisPill(def, isOn: a.isOn)
                 }
+                }
+                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
@@ -86,10 +91,10 @@ struct FindPillBar: View {
             NovaIcon("filter_handles", size: 20)
                 .foregroundStyle(Nova.Color.text)
                 .frame(width: 32, height: 32)
-                .background { pillBackground(on: true, shape: Circle()) }
+                .modifier(PillChrome(onMap: onMap, isOn: true, shape: Circle()))
                 .contentShape(Circle())
         }
-        .buttonStyle(NovaPressWashStyle(shape: Circle()))
+        .buttonStyle(PillPressStyle(onMap: onMap, shape: Circle()))
         .overlay(alignment: .topTrailing) {
             let n = s.activeFilterCount
             if n > 0 {
@@ -105,6 +110,8 @@ struct FindPillBar: View {
             }
         }
         .accessibilityLabel(s.activeFilterCount > 0 ? "Filters, \(s.activeFilterCount) applied" : "Filters")
+        .padding(.trailing, 4)
+        .zIndex(1)
     }
 
     private func pill(_ title: String, chevron open: Bool, action: @escaping () -> Void) -> some View {
@@ -117,10 +124,10 @@ struct FindPillBar: View {
             .padding(.leading, 12)
             .padding(.trailing, 8)
             .frame(height: 32)
-            .background { pillBackground(on: true, shape: Capsule()) }
+            .modifier(PillChrome(onMap: onMap, isOn: true, shape: Capsule()))
             .contentShape(Capsule())
         }
-        .buttonStyle(NovaPressWashStyle(shape: Capsule()))
+        .buttonStyle(PillPressStyle(onMap: onMap, shape: Capsule()))
     }
 
     private func togglePill(_ title: String, isOn: Bool, trailing: String? = nil, action: @escaping () -> Void) -> some View {
@@ -139,10 +146,10 @@ struct FindPillBar: View {
             .foregroundStyle(isOn ? Nova.Color.text : Nova.Color.gray700)
             .padding(.horizontal, 12)
             .frame(height: 32)
-            .background { pillBackground(on: isOn, shape: Capsule()) }
+            .modifier(PillChrome(onMap: onMap, isOn: isOn, shape: Capsule()))
             .contentShape(Capsule())
         }
-        .buttonStyle(NovaPressWashStyle(shape: Capsule()))
+        .buttonStyle(PillPressStyle(onMap: onMap, shape: Capsule()))
         .sensoryFeedback(.selection, trigger: isOn)
         .accessibilityValue(isOn ? "On" : "Off")
         .accessibilityHint("Toggles this filter")
@@ -208,27 +215,44 @@ struct FindPillBar: View {
             .foregroundStyle(isOn ? Nova.Color.text : Nova.Color.gray700)
             .padding(.horizontal, 12)
             .frame(height: 32)
-            .background { pillBackground(on: isOn, shape: Capsule()) }
+            .modifier(PillChrome(onMap: onMap, isOn: isOn, shape: Capsule()))
             .contentShape(Capsule())
         }
-        .buttonStyle(NovaPressWashStyle(shape: Capsule()))
+        .buttonStyle(PillPressStyle(onMap: onMap, shape: Capsule()))
         .accessibilityValue(isOn ? "On" : "Off")
     }
+}
 
-    /// Glass on the map (dimmer when off); white with a hairline in list view.
-    @ViewBuilder
-    private func pillBackground<S: InsettableShape>(on: Bool, shape: S) -> some View {
+/// Pill surface: native Liquid Glass over the map (clear glass when off),
+/// white with a hairline on the list canvas.
+private struct PillChrome<S: InsettableShape>: ViewModifier {
+    let onMap: Bool
+    let isOn: Bool
+    let shape: S
+
+    func body(content: Content) -> some View {
         if onMap {
-            if on {
-                Color.clear.novaGlass(in: shape)
-            } else {
-                shape.fill(.white.opacity(0.38))
-                    .background(.ultraThinMaterial, in: shape)
-                    .overlay(shape.strokeBorder(Nova.Color.gray800.opacity(0.36), lineWidth: 1))
-            }
+            content.novaGlass(in: shape, interactive: true, clear: !isOn)
         } else {
-            shape.fill(on ? Nova.Color.bgPrimary : Color.clear)
-                .overlay(shape.strokeBorder(on ? Nova.Color.border : Nova.Color.borderEmphasis, lineWidth: 1))
+            content.background {
+                shape.fill(isOn ? Nova.Color.bgPrimary : Color.clear)
+                    .overlay(shape.strokeBorder(isOn ? Nova.Color.border : Nova.Color.borderEmphasis, lineWidth: 1))
+            }
+        }
+    }
+}
+
+/// Interactive glass gives its own press response on the map; the flat
+/// list pills use Nova's press wash.
+private struct PillPressStyle<S: Shape>: ButtonStyle {
+    let onMap: Bool
+    let shape: S
+
+    func makeBody(configuration: Configuration) -> some View {
+        if onMap {
+            configuration.label
+        } else {
+            NovaPressWashStyle(shape: shape).makeBody(configuration: configuration)
         }
     }
 }

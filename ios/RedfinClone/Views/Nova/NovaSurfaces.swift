@@ -102,20 +102,37 @@ struct NovaBanner: View {
 // MARK: - Glass
 
 extension View {
-    /// The iOS Vision prototype's frosted surface (white 72%, blur 20,
-    /// inset white ring + 6% outer ring, elevation 3). On iOS 26 this is
-    /// native Liquid Glass; earlier versions use the material recipe.
+    /// Nova's frosted surface for chrome that floats over content (pills,
+    /// map controls, legend cards). On iOS 26 this is native Liquid Glass —
+    /// never a recreated blur; earlier versions fall back to the prototype's
+    /// material recipe (white 72%, inset ring, 6% outer ring, elevation 3).
+    /// `clear` is the lighter glass for de-emphasized (off) states.
     @ViewBuilder
-    func novaGlass<S: Shape>(in shape: S, interactive: Bool = false) -> some View {
+    func novaGlass<S: Shape>(in shape: S, interactive: Bool = false, clear: Bool = false) -> some View {
         if #available(iOS 26.0, *) {
-            self.glassEffect(interactive ? .regular.interactive() : .regular, in: shape)
+            self.glassEffect((clear ? Glass.clear : Glass.regular).interactive(interactive), in: shape)
         } else {
             self
                 .background(.ultraThinMaterial, in: shape)
-                .background(Nova.Color.bgPrimary.opacity(0.5), in: shape)
+                .background(Nova.Color.bgPrimary.opacity(clear ? 0.2 : 0.5), in: shape)
                 .overlay(shape.stroke(Color.white.opacity(0.6), lineWidth: 1).padding(0.5))
                 .overlay(shape.stroke(Nova.Color.gray800.opacity(0.06), lineWidth: 1))
                 .novaElevation(.level3)
+        }
+    }
+}
+
+/// Groups neighboring `novaGlass` elements so Liquid Glass renders and
+/// morphs them together (a `GlassEffectContainer` on iOS 26).
+struct NovaGlassGroup<Content: View>: View {
+    var spacing: CGFloat? = nil
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer(spacing: spacing) { content() }
+        } else {
+            content()
         }
     }
 }
