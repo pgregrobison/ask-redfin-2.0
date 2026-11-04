@@ -27,7 +27,7 @@ struct TourBookingFlowView: View {
     @FocusState private var focusedField: Field?
 
     private let matchedAgentName = "Jordan Kim"
-    private let matchedAgentPhotoURL = "https://i.pravatar.cc/200?img=33"
+    private let matchedAgentPhotoURL = "https://i.pravatar.cc/200?img=68"
     private let matchedAgentRating = "4.9 ★ (128 reviews)"
 
     var body: some View {
@@ -68,7 +68,7 @@ struct TourBookingFlowView: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                     Text("Pick a date")
-                        .font(.headline)
+                        .font(Theme.Typography.headline)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: Theme.Spacing.sm) {
                             ForEach(nextDates, id: \.self) { date in
@@ -80,7 +80,7 @@ struct TourBookingFlowView: View {
 
                 VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                     Text("Pick a time")
-                        .font(.headline)
+                        .font(Theme.Typography.headline)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: Theme.Spacing.sm) {
                             ForEach(timeSlots.indices, id: \.self) { index in
@@ -102,7 +102,7 @@ struct TourBookingFlowView: View {
         ) {
             VStack(spacing: Theme.Spacing.sm + 2) {
                 TextField("Full name", text: $fullName)
-                    .font(.subheadline)
+                    .font(Theme.Typography.secondary)
                     .textContentType(.name)
                     .submitLabel(.next)
                     .focused($focusedField, equals: .name)
@@ -113,7 +113,7 @@ struct TourBookingFlowView: View {
                     .clipShape(.rect(cornerRadius: Theme.Radius.inputField))
 
                 TextField("Phone number", text: $phone)
-                    .font(.subheadline)
+                    .font(Theme.Typography.secondary)
                     .keyboardType(.phonePad)
                     .textContentType(.telephoneNumber)
                     .submitLabel(.done)
@@ -172,13 +172,13 @@ struct TourBookingFlowView: View {
 
             VStack(spacing: Theme.Spacing.xs) {
                 Text("Tour Requested")
-                    .font(.title2.bold())
+                    .font(.inter(22, .bold))
                 Text("\(dateLabel) at \(timeLabel)")
-                    .font(.subheadline)
+                    .font(Theme.Typography.secondary)
                     .foregroundStyle(.secondary)
                 if hasAgent == false {
                     Text("You're matched with \(matchedAgentName).")
-                        .font(.subheadline)
+                        .font(Theme.Typography.secondary)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -205,14 +205,14 @@ struct TourBookingFlowView: View {
         } label: {
             VStack(spacing: 4) {
                 Text(date.formatted(.dateTime.weekday(.wide)))
-                    .font(.caption2.weight(.semibold))
+                    .font(.inter(11, .semibold))
                     .textCase(.uppercase)
                     .foregroundStyle(selected ? Theme.Colors.brandGreen : .secondary)
                 Text(date.formatted(.dateTime.day()))
-                    .font(.title.bold())
+                    .font(Theme.Typography.largeNumber)
                     .foregroundStyle(selected ? Theme.Colors.brandGreen : .primary)
                 Text(date.formatted(.dateTime.month(.abbreviated)))
-                    .font(.caption2.weight(.semibold))
+                    .font(.inter(11, .semibold))
                     .textCase(.uppercase)
                     .foregroundStyle(selected ? Theme.Colors.brandGreen : .secondary)
             }
@@ -234,7 +234,7 @@ struct TourBookingFlowView: View {
             selectedTimeIndex = index
         } label: {
             Text(slot.label)
-                .font(.subheadline.weight(.semibold))
+                .font(.inter(15, .semibold))
                 .foregroundStyle(selected ? Theme.Colors.brandGreen : .primary)
                 .frame(width: 92, height: 52)
                 .background(Theme.Colors.background, in: RoundedRectangle(cornerRadius: Theme.Radius.medium))
@@ -273,12 +273,12 @@ struct TourBookingFlowView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(matchedAgentName)
-                    .font(.subheadline.bold())
+                    .font(Theme.Typography.secondaryBold)
                 Text(matchedAgentRating)
-                    .font(.caption)
+                    .font(Theme.Typography.caption)
                     .foregroundStyle(.secondary)
                 Text(tourRequest.address.map { "Local expert near \($0)" } ?? "Local expert in the area")
-                    .font(.caption2)
+                    .font(Theme.Typography.micro)
                     .foregroundStyle(.tertiary)
             }
 

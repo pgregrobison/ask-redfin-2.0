@@ -65,7 +65,8 @@ struct TourRouteMapWidget: View {
         }
         .background(Theme.Colors.secondaryBackground)
         .clipShape(.rect(cornerRadius: Theme.Radius.widget))
-        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.leading, Theme.Spacing.md)
+        .padding(.trailing, Theme.Spacing.md + Theme.Spacing.xl)
         .opacity(hasAppeared ? 1 : 0)
         .onAppear {
             withAnimation(.easeInOut(duration: 0.5)) {
@@ -84,9 +85,9 @@ struct TourRouteMapWidget: View {
                 .foregroundStyle(.primary)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Today's tour route")
-                    .font(.headline)
+                    .font(Theme.Typography.headline)
                 Text("\(route.stops.count) stops • optimized order")
-                    .font(.caption)
+                    .font(Theme.Typography.caption)
                     .foregroundStyle(.secondary)
             }
         }
@@ -103,7 +104,7 @@ struct TourRouteMapWidget: View {
                             .frame(width: 28, height: 28)
                             .shadow(color: .black.opacity(0.25), radius: 3, y: 1)
                         Text("\(item.stop.id)")
-                            .font(.caption2.bold())
+                            .font(.inter(11, .bold))
                             .foregroundStyle(.white)
                     }
                 }
@@ -129,23 +130,23 @@ struct TourRouteMapWidget: View {
                                 .fill(Theme.Colors.brandRed)
                                 .frame(width: 22, height: 22)
                             Text("\(item.stop.id)")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.inter(11, .bold))
                                 .foregroundStyle(.white)
                         }
 
                         VStack(alignment: .leading, spacing: 1) {
                             Text(item.listing.address)
-                                .font(.subheadline.weight(.semibold))
+                                .font(.inter(15, .semibold))
                                 .foregroundStyle(.primary)
                             Text(item.listing.neighborhood ?? item.listing.city)
-                                .font(.caption)
+                                .font(Theme.Typography.caption)
                                 .foregroundStyle(.secondary)
                         }
 
                         Spacer()
 
                         Text(item.stop.time)
-                            .font(.caption.weight(.semibold))
+                            .font(.inter(12, .semibold))
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
 
@@ -249,7 +250,7 @@ private struct FullScreenRouteMap: View {
                                 .frame(width: 36, height: 36)
                                 .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
                             Text("\(item.stop.id)")
-                                .font(.headline.bold())
+                                .font(.inter(17, .bold))
                                 .foregroundStyle(.white)
                         }
                     }

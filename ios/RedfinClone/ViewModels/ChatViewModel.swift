@@ -39,6 +39,10 @@ class ChatViewModel {
     var currentFindFiltersProvider: (() -> SearchFilters)?
     var focusInputOnAppear: Bool = false
     var pendingAttachments: [ChatAttachment] = []
+    /// Set to `true` mid-session to focus the input field (used by the Launch
+    /// Demo autoplay script). `AskRedfinView` observes this via `.onChange`
+    /// and resets it back to `false` once handled.
+    var requestInputFocus: Bool = false
 
     private let chatService = ChatService()
     private let storageKey = "chatThreads_v2"
@@ -98,7 +102,7 @@ class ChatViewModel {
     func createNewThread() {
         let welcomeMessage = ChatMessage(
             role: .assistant,
-            content: "Hey there! I see you're looking around New York. I can help you find the perfect home \u{2014} just let me know what you're looking for, and I'll take care of the rest."
+            content: "Hey there! I see you're looking around Seattle. I can help you find the perfect home \u{2014} just let me know what you're looking for, and I'll take care of the rest."
         )
         let thread = ChatThread(messages: [welcomeMessage])
         threads.insert(thread, at: 0)
@@ -320,6 +324,119 @@ class ChatViewModel {
         Task { await streamAssistantMessage(text) }
     }
 
+    // MARK: - Launch Demo autoplay
+
+    /// Discards whatever the autoplay script (or manual poking around) added
+    /// on top of the seed thread and restores the pristine starting state, so
+    /// `AskRedfinView.onAppear` can run `runDemoAutoplay()` again from
+    /// scratch. Debug-only — see `DebugPanelView`'s restart button.
+    func resetToSeedThread() {
+        guard DemoFixtures.isEnabled else { return }
+        streamTask?.cancel()
+        streamTask = nil
+        thinkingState = .none
+        inputText = ""
+        pendingAttachments = []
+        scrollPositions = [:]
+        bottomSpacerHeights = [:]
+        threads = [DemoFixtures.seedThread]
+        activeThreadId = DemoFixtures.seedThread.id
+        saveThreads()
+    }
+
+    /// Scripts the "tour → financing" beat for the launch video: auto-types
+    /// each prompt and sends it. The bot's reply ends in a real
+    /// `TourRequestButton`/`MortgageRequestButton` that launches the actual
+    /// full-page flow — this no longer morphs the button into a canned
+    /// confirmation card. Only ever called when `DemoFixtures.isEnabled`.
+    func runDemoAutoplay() async {
+        try? await Task.sleep(for: .seconds(1.5))
+        await typeAndSend("I want to see this home!")
+        await waitForActiveStream()
+
+        try? await Task.sleep(for: .seconds(2.5))
+        await typeAndSend("Can you help me figure out financing?")
+        await waitForActiveStream()
+    }
+
+    private func typeAndSend(_ text: String) async {
+        requestInputFocus = true
+        try? await Task.sleep(for: .milliseconds(350))
+        for character in text {
+            inputText.append(character)
+            try? await Task.sleep(for: .milliseconds(35))
+        }
+        try? await Task.sleep(for: .milliseconds(400))
+        sendMessage()
+
+        // Anchor the just-sent message to the top of the viewport, leaving
+        // room below for the bot's reply — the same scroll behavior a manual
+        // send gets via `AskRedfinView.sendAndScroll()`. Reuses the
+        // voice-mode scroll bridge since the need is identical.
+        if let threadId = activeThreadId {
+            bottomSpacerHeights[threadId] = UIScreen.main.bounds.height
+        }
+        if let lastUserMessage = activeMessages.last(where: { $0.role == .user }) {
+            voiceScrollToTopId = lastUserMessage.id
+        }
+    }
+
+    private func waitForActiveStream() async {
+        try? await Task.sleep(for: .milliseconds(150))
+        if let task = streamTask {
+            await task.value
+        }
+    }
+
+    // The scripted flow picks up after the "similar homes" reveal, so "this
+    // home" in the scripted tour/financing prompts refers to the first of
+    // those two results (1801 Lakeview Blvd E), not the secret-room home the
+    // thread opened with.
+    private static let scriptedTourListingId = "sc-t3-04"
+    private static let scriptedTourListingAddress = "1801 Lakeview Blvd E"
+
+    private static func isScriptedTourPrompt(_ input: String) -> Bool {
+        input.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "i want to see this home!"
+    }
+
+    private static func isScriptedMortgagePrompt(_ input: String) -> Bool {
+        input.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "can you help me figure out financing?"
+    }
+
+    private func confirmScriptedTour() {
+        guard let ti = threads.firstIndex(where: { $0.id == activeThreadId }),
+              let mi = threads[ti].messages.lastIndex(where: { $0.tourRequest != nil }) else { return }
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        threads[ti].messages[mi].scriptedTourConfirmation = ScriptedTourConfirmation(
+            // The scripted flow now picks up after the "similar homes" reveal,
+            // so the tour is for the first of those two results (1801 Lakeview
+            // Blvd E) rather than the secret-room home the thread opened with.
+            listingId: "sc-t3-04",
+            dateLabel: "Sat, Sep 6",
+            timeLabel: "2:00 PM",
+            agentName: "Jordan Kim",
+            agentPhotoURL: "https://i.pravatar.cc/200?img=68"
+        )
+        saveThreads()
+    }
+
+    private func confirmScriptedMortgage() {
+        guard let ti = threads.firstIndex(where: { $0.id == activeThreadId }),
+              let mi = threads[ti].messages.lastIndex(where: { $0.mortgageRequest != nil }) else { return }
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        let expires = Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "M/d/yy"
+        threads[ti].messages[mi].scriptedMortgageConfirmation = ScriptedMortgageConfirmation(
+            income: 200_000,
+            downPayment: 225_000,
+            loanType: "30-year fixed",
+            rateAPR: "6.25% / 6.68%",
+            expiresLabel: "Expires \(formatter.string(from: expires))"
+        )
+        saveThreads()
+    }
+
     func setFeedback(_ feedback: MessageFeedback, for messageId: String) {
         guard let ti = threads.firstIndex(where: { $0.id == activeThreadId }),
               let mi = threads[ti].messages.firstIndex(where: { $0.id == messageId }) else { return }
@@ -466,12 +583,22 @@ class ChatViewModel {
             addNbhd = add
 
         case .tour(let text, let request):
-            responseText = text
-            tourReq = request
+            if DemoFixtures.isEnabled, Self.isScriptedTourPrompt(input) {
+                responseText = "Great! You can book a tour for \(Self.scriptedTourListingAddress) by clicking the button below. If you'd like, after that I can also help you compare it with similar homes nearby so you can see how it stacks up."
+                tourReq = TourRequest(listingId: Self.scriptedTourListingId, address: Self.scriptedTourListingAddress)
+            } else {
+                responseText = text
+                tourReq = request
+            }
 
         case .mortgage(let text, let request):
-            responseText = text
-            mortgageReq = request
+            if DemoFixtures.isEnabled, Self.isScriptedMortgagePrompt(input) {
+                responseText = "Absolutely, I can help you get started with financing for \(Self.scriptedTourListingAddress). Use the mortgage button below to explore pre-qualification and financing options for this home through Redfin's partner Rocket Mortgage."
+                mortgageReq = MortgageRequest(listingId: Self.scriptedTourListingId)
+            } else {
+                responseText = text
+                mortgageReq = request
+            }
 
         case .staleChat(let text):
             responseText = text

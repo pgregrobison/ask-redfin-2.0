@@ -8,6 +8,8 @@ struct FindMapView: View {
     var showShimmer: Bool = false
     var accessoryMode: Bool = false
 
+    @State private var containerMinY: CGFloat = 0
+
     var body: some View {
         ZStack(alignment: .bottom) {
             Map(position: $viewModel.mapPosition) {
@@ -18,8 +20,7 @@ struct FindMapView: View {
                         } label: {
                             MapPinView(
                                 listing: listing,
-                                isSelected: viewModel.selectedListing?.id == listing.id,
-                                isSeen: viewModel.isSeen(listing)
+                                isSelected: viewModel.selectedListing?.id == listing.id
                             )
                         }
                     }
@@ -51,7 +52,7 @@ struct FindMapView: View {
 
             Color.clear
                 .overlay(alignment: .topTrailing) {
-                    MapActionButtons(viewModel: viewModel, alignWithToolbar: accessoryMode)
+                    MapActionButtons(viewModel: viewModel, containerMinY: containerMinY)
                 }
                 .allowsHitTesting(!showShimmer)
 
@@ -78,12 +79,17 @@ struct FindMapView: View {
                 viewModel.triggerCompassNotificationIfNeeded()
             }
         }
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.frame(in: .global).minY
+        } action: { minY in
+            containerMinY = minY
+        }
     }
 }
 
 private struct MapActionButtons: View {
     let viewModel: ListingsViewModel
-    var alignWithToolbar: Bool = false
+    let containerMinY: CGFloat
 
     var body: some View {
         GlassActionButtonStack(items: [
@@ -94,7 +100,12 @@ private struct MapActionButtons: View {
             })
         ])
         .padding(.trailing, Theme.Spacing.md)
-        .padding(.top, alignWithToolbar ? -(Theme.IconSize.mediumTap + Theme.Spacing.xs) : Theme.Spacing.xs)
+        // Top-align with the Find tab's floating toolbar: that toolbar lives
+        // outside this view's NavigationStack, so its safe-area top doesn't
+        // match this container's own — sync to its measured position instead
+        // of guessing a fixed padding. Can be negative (pulling the stack up
+        // past this container's own top-safe-area inset).
+        .padding(.top, viewModel.topChromeMinY - containerMinY)
         .animation(nil, value: viewModel.selectedListing != nil)
     }
 }

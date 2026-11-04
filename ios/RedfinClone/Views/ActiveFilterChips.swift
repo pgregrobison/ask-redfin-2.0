@@ -16,7 +16,7 @@ struct ActiveFilterChips: View {
                         }
                     } label: {
                         Text("Clear all")
-                            .font(.footnote.weight(.semibold))
+                            .font(.inter(13, .semibold))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, Theme.Spacing.sm)
                             .frame(height: 32)
@@ -34,7 +34,7 @@ struct ActiveFilterChips: View {
     private func chipView(_ chip: FilterChip) -> some View {
         HStack(spacing: 6) {
             Text(chip.label)
-                .font(.footnote.weight(.semibold))
+                .font(.inter(13, .semibold))
                 .foregroundStyle(.primary)
             Button {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {

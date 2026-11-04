@@ -20,7 +20,8 @@ struct StaleChatWidget: View {
         }
         .background(Theme.Colors.secondaryBackground)
         .clipShape(.rect(cornerRadius: Theme.Radius.widget))
-        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.leading, Theme.Spacing.md)
+        .padding(.trailing, Theme.Spacing.md + Theme.Spacing.xl)
         .animation(.snappy(duration: 0.35), value: resolved)
     }
 
@@ -34,9 +35,9 @@ struct StaleChatWidget: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("This chat looks stale")
-                    .font(.headline)
+                    .font(Theme.Typography.headline)
                 Text("Pick up where you left off or start fresh")
-                    .font(.caption)
+                    .font(Theme.Typography.caption)
                     .foregroundStyle(.secondary)
             }
 
@@ -62,7 +63,7 @@ struct StaleChatWidget: View {
                     Image(systemName: "plus.bubble")
                         .font(.system(size: 13, weight: .semibold))
                     Text("New chat")
-                        .font(.subheadline.bold())
+                        .font(Theme.Typography.secondaryBold)
                 }
                 .foregroundStyle(Theme.Colors.invertedPrimary)
                 .frame(maxWidth: .infinity)
@@ -81,7 +82,7 @@ struct StaleChatWidget: View {
                     Image(systemName: "arrow.forward")
                         .font(.system(size: 13, weight: .semibold))
                     Text("Continue")
-                        .font(.subheadline.bold())
+                        .font(Theme.Typography.secondaryBold)
                 }
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity)
@@ -105,7 +106,7 @@ struct StaleChatWidget: View {
                 .foregroundStyle(choseNew ? Theme.Colors.brandRed : Theme.Colors.brandGreen)
 
             Text(choseNew ? "Starting a new chat…" : "Continuing this conversation.")
-                .font(.subheadline)
+                .font(Theme.Typography.secondary)
                 .foregroundStyle(.secondary)
 
             Spacer()

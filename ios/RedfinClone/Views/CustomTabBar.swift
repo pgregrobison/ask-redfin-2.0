@@ -17,30 +17,22 @@ nonisolated enum AppTab: Int, CaseIterable, Sendable {
         }
     }
 
-    var icon: String {
+    /// Custom Blueprint icon asset (Assets.xcassets), replacing the old
+    /// SF Symbol icon/selectedIcon pair — one glyph per tab, tinted by
+    /// selection state instead of swapping outline/filled variants.
+    var assetName: String {
         switch self {
-        case .find: "binoculars"
-        case .forYou: "square.stack"
-        case .saved: "heart"
-        case .myHome: "house"
-        case .myRedfin: "person.crop.circle"
-        }
-    }
-
-    var selectedIcon: String {
-        switch self {
-        case .find: "binoculars.fill"
-        case .forYou: "square.stack.fill"
-        case .saved: "heart.fill"
-        case .myHome: "house.fill"
-        case .myRedfin: "person.crop.circle.fill"
+        case .find: "TabFindHomes"
+        case .forYou: "TabForYou"
+        case .saved: "TabSaved"
+        case .myHome: "TabMyHome"
+        case .myRedfin: "TabMyRedfin"
         }
     }
 }
 
 struct CustomTabBar: View {
     @Binding var selectedTab: AppTab
-    let onFABTap: () -> Void
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -53,45 +45,18 @@ struct CustomTabBar: View {
 
     @available(iOS 26.0, *)
     private var glassTabBar: some View {
-        GlassEffectContainer(spacing: Theme.Spacing.sm) {
-            HStack(spacing: Theme.Spacing.sm) {
-                tabPillContent
-                    .padding(.horizontal, Theme.Spacing.xs)
-                    .glassEffect(.regular.interactive(), in: .capsule)
-
-                Button(action: onFABTap) {
-                    Image(systemName: "sparkle")
-                        .font(.system(size: Theme.IconSize.tabBar, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .frame(width: Theme.ButtonSize.fabSize, height: Theme.ButtonSize.fabSize)
-                }
-                .glassEffect(.regular.interactive(), in: .circle)
-            }
+        tabPillContent
+            .padding(.horizontal, Theme.Spacing.xs)
+            .glassEffect(.regular.interactive(), in: .capsule)
             .padding(.horizontal, Theme.Spacing.md)
-        }
     }
 
     private var legacyTabBar: some View {
-        HStack(spacing: Theme.Spacing.sm) {
-            tabPillContent
-                .padding(.horizontal, Theme.Spacing.xs)
-                .background(.ultraThinMaterial, in: Capsule())
-                .shadow(color: Theme.Shadow.overlayColor, radius: Theme.Shadow.overlayRadius, y: Theme.Shadow.overlayY)
-
-            Button(action: onFABTap) {
-                ZStack {
-                    Circle()
-                        .fill(.ultraThinMaterial)
-                        .frame(width: Theme.ButtonSize.fabSize, height: Theme.ButtonSize.fabSize)
-                        .shadow(color: Theme.Shadow.overlayColor, radius: Theme.Shadow.mediumRadius, y: Theme.Shadow.mediumY)
-
-                    Image(systemName: "sparkle")
-                        .font(.system(size: Theme.IconSize.tabBar, weight: .semibold))
-                        .foregroundStyle(.primary)
-                }
-            }
-        }
-        .padding(.horizontal, Theme.Spacing.md)
+        tabPillContent
+            .padding(.horizontal, Theme.Spacing.xs)
+            .background(.ultraThinMaterial, in: Capsule())
+            .shadow(color: Theme.Shadow.overlayColor, radius: Theme.Shadow.overlayRadius, y: Theme.Shadow.overlayY)
+            .padding(.horizontal, Theme.Spacing.md)
     }
 
     private var tabPillContent: some View {
@@ -103,20 +68,25 @@ struct CustomTabBar: View {
                     }
                 } label: {
                     VStack(spacing: Theme.Spacing.xxs) {
-                        Image(systemName: selectedTab == tab ? tab.selectedIcon : tab.icon)
-                            .font(.system(size: Theme.IconSize.tabBar, weight: .semibold))
-                            .contentTransition(.symbolEffect(.replace))
+                        Image(tab.assetName)
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: Theme.IconSize.tabBar, height: Theme.IconSize.tabBar)
                         Text(tab.title)
                             .font(Theme.Typography.micro)
                             .fontWeight(selectedTab == tab ? .semibold : .regular)
                     }
-                    .foregroundStyle(selectedTab == tab ? .primary : .secondary)
+                    .foregroundStyle(selectedTab == tab ? Theme.Colors.brandRed : .secondary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, Theme.ButtonSize.tabItemPadding)
+                    .background {
+                        if selectedTab == tab {
+                            Capsule().fill(Theme.Colors.fill)
+                        }
+                    }
                 }
             }
         }
     }
 }
-
-

@@ -31,8 +31,19 @@ struct ContentView: View {
             .environment(\.askRedfinContext, askRedfinContext)
             .overlay(alignment: .top) {
                 if selectedTab == .find && navigationPath.isEmpty {
-                    FindPillOverlay(viewModel: viewModel, showLocationMenu: $showLocationMenu)
-                        .opacity(splashChromeOpacity)
+                    Group {
+                        if debugSettings.findChromeStyle == .searchBar {
+                            FindTopBar(viewModel: viewModel, onAskTap: { viewModel.showChat = true })
+                        } else {
+                            FindPillOverlay(viewModel: viewModel, showLocationMenu: $showLocationMenu)
+                        }
+                    }
+                    .opacity(splashChromeOpacity)
+                    .onGeometryChange(for: CGFloat.self) { proxy in
+                        proxy.frame(in: .global).minY
+                    } action: { minY in
+                        viewModel.topChromeMinY = minY
+                    }
                 }
             }
             .fullScreenCover(isPresented: $showSplash) {
@@ -62,14 +73,23 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showDebugPanel) {
-            DebugPanelView(settings: debugSettings, onPlaySplash: {
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(350))
-                    selectedTab = .find
-                    splashChromeOpacity = 0
-                    showSplash = true
+            DebugPanelView(
+                settings: debugSettings,
+                onPlaySplash: {
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(350))
+                        selectedTab = .find
+                        splashChromeOpacity = 0
+                        showSplash = true
+                    }
+                },
+                onRestartScriptedFlow: {
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(350))
+                        restartScriptedDemo()
+                    }
                 }
-            })
+            )
             .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $viewModel.showChat, onDismiss: {
@@ -171,13 +191,8 @@ struct ContentView: View {
                 tabContent
 
                 if showTabBar {
-                    CustomTabBar(
-                        selectedTab: $selectedTab,
-                        onFABTap: {
-                            viewModel.showChat = true
-                        }
-                    )
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    CustomTabBar(selectedTab: $selectedTab)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
             .ignoresSafeArea(.keyboard)
@@ -199,14 +214,14 @@ struct ContentView: View {
                 NavigationStack(path: $navigationPath) {
                     FindView(viewModel: viewModel, zoomNamespace: zoomNamespace, isActive: selectedTab == .find, onProfileTap: {}, onListingTap: { listing in
                         navigateToListing(listing)
-                    }, showShimmer: mapShimmerActive, accessoryMode: true, hideProfileButton: true)
+                    }, showShimmer: mapShimmerActive, accessoryMode: true, hideProfileButton: true, hideListToggle: debugSettings.findChromeStyle == .searchBar)
                     .navigationDestination(for: Listing.self) { listing in
                         listingDetail(for: listing)
                     }
                 }
                 .tint(.primary)
             } label: {
-                Label(AppTab.find.title, systemImage: AppTab.find.selectedIcon)
+                Label(AppTab.find.title, image: AppTab.find.assetName)
             }
             Tab(value: AppTab.forYou) {
                 NavigationStack(path: $forYouPath) {
@@ -220,7 +235,7 @@ struct ContentView: View {
                 }
                 .tint(.primary)
             } label: {
-                Label(AppTab.forYou.title, systemImage: AppTab.forYou.selectedIcon)
+                Label(AppTab.forYou.title, image: AppTab.forYou.assetName)
             }
             Tab(value: AppTab.saved) {
                 NavigationStack(path: $savedPath) {
@@ -234,7 +249,7 @@ struct ContentView: View {
                 }
                 .tint(.primary)
             } label: {
-                Label(AppTab.saved.title, systemImage: AppTab.saved.selectedIcon)
+                Label(AppTab.saved.title, image: AppTab.saved.assetName)
             }
             Tab(value: AppTab.myHome) {
                 NavigationStack(path: $myHomePath) {
@@ -242,7 +257,7 @@ struct ContentView: View {
                 }
                 .tint(.primary)
             } label: {
-                Label(AppTab.myHome.title, systemImage: AppTab.myHome.selectedIcon)
+                Label(AppTab.myHome.title, image: AppTab.myHome.assetName)
             }
             Tab(value: AppTab.myRedfin) {
                 NavigationStack(path: $myRedfinPath) {
@@ -250,20 +265,25 @@ struct ContentView: View {
                 }
                 .tint(.primary)
             } label: {
-                Label(AppTab.myRedfin.title, systemImage: AppTab.myRedfin.selectedIcon)
+                Label(AppTab.myRedfin.title, image: AppTab.myRedfin.assetName)
             }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
         .tint(Theme.Colors.brandRed)
         .tabViewBottomAccessory {
-            AskRedfinAccessoryBar {
-                chatViewModel.focusInputOnAppear = true
-                viewModel.showChat = true
-            }
-            .onGeometryChange(for: CGFloat.self) { proxy in
-                proxy.frame(in: .global).midY
-            } action: { midY in
-                if midY > 0 { accessoryBarMidY = midY }
+            // Only shown for the `.classic` top chrome — `.searchBar`'s
+            // `FindTopBar` already has its own inline Ask button, so a
+            // bottom accessory bar would be redundant.
+            if debugSettings.findChromeStyle == .classic {
+                AskRedfinAccessoryBar {
+                    chatViewModel.focusInputOnAppear = true
+                    viewModel.showChat = true
+                }
+                .onGeometryChange(for: CGFloat.self) { proxy in
+                    proxy.frame(in: .global).midY
+                } action: { midY in
+                    if midY > 0 { accessoryBarMidY = midY }
+                }
             }
         }
         .ignoresSafeArea(.keyboard)
@@ -283,7 +303,7 @@ struct ContentView: View {
         ZStack {
             FindView(viewModel: viewModel, zoomNamespace: zoomNamespace, isActive: selectedTab == .find, onProfileTap: { showDebugPanel = true }, onListingTap: { listing in
                 navigateToListing(listing)
-            }, showShimmer: mapShimmerActive)
+            }, showShimmer: mapShimmerActive, hideListToggle: debugSettings.findChromeStyle == .searchBar)
             .animation(.easeInOut(duration: 0.25), value: mapShimmerActive)
             .opacity(selectedTab == .find ? 1 : 0)
             .allowsHitTesting(selectedTab == .find)
@@ -401,5 +421,17 @@ struct ContentView: View {
             try? await Task.sleep(for: .milliseconds(400))
             chatViewModel.startTourDay()
         }
+    }
+
+    /// Debug-only: resets the seed thread to its pristine starting state and
+    /// reopens chat, so `AskRedfinView.onAppear` runs the autoplay script
+    /// again from the top — no relaunch needed. See `DebugPanelView`.
+    private func restartScriptedDemo() {
+        chatViewModel.resetToSeedThread()
+        navigationPath = NavigationPath()
+        selectedTab = .find
+        viewModel.showListView = false
+        viewModel.dismissOverlay()
+        viewModel.showChat = true
     }
 }

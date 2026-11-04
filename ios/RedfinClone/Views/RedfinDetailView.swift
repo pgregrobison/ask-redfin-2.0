@@ -150,7 +150,7 @@ struct RedfinDetailView: View {
             ToolbarItem(placement: .principal) {
                 if scrollOffset < -(photoCarouselHeight - 100) {
                     Text(listing.address)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.inter(15, .semibold))
                         .lineLimit(1)
                         .transition(.opacity)
                 }
@@ -246,7 +246,7 @@ struct RedfinDetailView: View {
                 Image(systemName: icon)
                     .font(.system(size: 11, weight: .semibold))
                 Text(label)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.inter(12, .medium))
             }
             .foregroundStyle(selectedMediaTab == tab ? .white : .white.opacity(0.5))
             .frame(maxWidth: .infinity)
@@ -328,7 +328,7 @@ struct RedfinDetailView: View {
                 Text("·")
                 Text("\(listing.sqft.formatted()) sq ft")
             }
-            .font(.system(size: 18, weight: .semibold))
+            .font(.inter(18, .semibold))
             .foregroundStyle(.primary)
 
             Text(listing.fullAddress)
@@ -345,7 +345,7 @@ struct RedfinDetailView: View {
         HStack {
             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                 Text("$\(totalMonthly.formatted())/mo")
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.inter(20, .bold))
                     .foregroundStyle(.primary)
 
                 HStack(spacing: Theme.Spacing.xxs) {

@@ -18,13 +18,9 @@ class ChatService {
             return .staleChat(text: "It looks like this conversation has been quiet for a while. Want to pick up where you left off, or start fresh with something new?")
         }
 
-        if lower.containsAny(["home", "house", "apartment", "condo", "listing", "find", "search", "property", "place", "buy", "bed", "br", "studio"]) {
-            let filters = extractFilters(from: lower)
-            let addNbhd = detectsAddNeighborhood(in: lower) && filters.neighborhoods != nil
-            let text = buildListingsResponse(from: lower, filters: filters)
-            return .listings(text: text, filters: filters, addNeighborhoods: addNbhd)
-        }
-
+        // Checked before the generic home-search branch below: more specific
+        // intents (tour/mortgage) should win even when the phrase also
+        // contains a broad word like "home" (e.g. "I want to see this home!").
         if lower.containsAny([
             "mortgage", "prequalified", "prequalify", "pre-qualified", "pre qualified", "preqalified",
             "preapproved", "pre-approved", "pre approved", "get approved",
@@ -36,7 +32,7 @@ class ChatService {
             return .mortgage(text: text, request: request)
         }
 
-        if lower.containsAny(["tour", "schedule a tour", "tour a home", "tour this", "visit", "showing", "see the"]) {
+        if lower.containsAny(["tour", "schedule a tour", "tour a home", "tour this", "visit", "showing", "see the", "want to see"]) {
             let address = extractAddress(from: lower)
             let listingId = extractListingId(from: lower)
             let text: String
@@ -49,10 +45,17 @@ class ChatService {
             return .tour(text: text, request: request)
         }
 
+        if lower.containsAny(["home", "house", "apartment", "condo", "listing", "find", "search", "property", "place", "buy", "bed", "br", "studio"]) {
+            let filters = extractFilters(from: lower)
+            let addNbhd = detectsAddNeighborhood(in: lower) && filters.neighborhoods != nil
+            let text = buildListingsResponse(from: lower, filters: filters)
+            return .listings(text: text, filters: filters, addNeighborhoods: addNbhd)
+        }
+
         let fallbacks = [
-            "I can help you find homes or schedule tours in the NYC area. Try asking me something like \"show me homes in Brooklyn\" or \"find condos under $1M\"!",
-            "I'm your NYC real estate assistant! Ask me to find homes, apartments, or condos — or I can help schedule a tour. What are you looking for?",
-            "Looking for your next home? I can search listings across Manhattan, Brooklyn, Queens, and more. Just tell me what you're looking for!"
+            "I can help you find homes or schedule tours in the Seattle area. Try asking me something like \"show me homes in Ballard\" or \"find homes under $800K\"!",
+            "I'm your Seattle real estate assistant! Ask me to find homes, apartments, or condos — or I can help schedule a tour. What are you looking for?",
+            "Looking for your next home? I can search listings across Fremont, Ballard, Capitol Hill, Bellevue, and more. Just tell me what you're looking for!"
         ]
         return .fallback(text: fallbacks.randomElement()!)
     }
@@ -160,28 +163,18 @@ class ChatService {
         }
 
         let neighborhoods: [(String, String)] = [
-            ("upper west side", "Upper West Side"), ("upper west", "Upper West Side"), ("uws", "Upper West Side"),
-            ("upper east side", "Upper East Side"), ("upper east", "Upper East Side"), ("ues", "Upper East Side"),
-            ("hudson yards", "Hudson Yards"),
-            ("hell's kitchen", "Hell's Kitchen"), ("hells kitchen", "Hell's Kitchen"),
-            ("murray hill", "Murray Hill"),
-            ("financial district", "Financial District"), ("fidi", "Financial District"),
-            ("tribeca", "Tribeca"),
-            ("soho", "SoHo"),
-            ("west village", "West Village"),
-            ("east village", "East Village"),
-            ("midtown", "Midtown"),
-            ("chelsea", "Chelsea"),
-            ("harlem", "Harlem"),
-            ("williamsburg", "Williamsburg"),
-            ("bushwick", "Bushwick"),
-            ("park slope", "Park Slope"),
-            ("dumbo", "DUMBO"),
-            ("long island city", "Long Island City"), ("lic", "Long Island City"),
-            ("astoria", "Astoria"),
-            ("brooklyn", "Brooklyn"),
-            ("queens", "Queens"),
-            ("manhattan", "Manhattan"),
+            ("fremont", "Fremont"),
+            ("phinney ridge", "Phinney Ridge"), ("phinney", "Phinney Ridge"),
+            ("greenwood", "Greenwood"),
+            ("ballard", "Ballard"),
+            ("queen anne", "Queen Anne"),
+            ("columbia city", "Columbia City"),
+            ("capitol hill", "Capitol Hill"),
+            ("west seattle", "West Seattle"),
+            ("green lake", "Green Lake"),
+            ("beacon hill", "Beacon Hill"),
+            ("bellevue", "Bellevue"),
+            ("kirkland", "Kirkland"),
             ("eastlake", "Eastlake"),
             ("seattle", "Seattle")
         ]
@@ -217,7 +210,7 @@ class ChatService {
     private func buildListingsResponse(from input: String, filters: SearchFilters) -> String {
         let results = searchListings(filters: filters)
         if results.isEmpty {
-            return "I couldn't find any listings matching those criteria. Try broadening your search — for example, ask me to show all homes in NYC."
+            return "I couldn't find any listings matching those criteria. Try broadening your search — for example, ask me to show all homes in Seattle."
         }
 
         var parts: [String] = []
@@ -232,7 +225,7 @@ class ChatService {
 
         let count = results.count
         if parts.isEmpty {
-            return "I found \(count) home\(count == 1 ? "" : "s") in NYC. Here's what's available:"
+            return "I found \(count) home\(count == 1 ? "" : "s") in Seattle. Here's what's available:"
         }
         return "I found \(count) \(parts.joined(separator: " ")) home\(count == 1 ? "" : "s"). Take a look:"
     }

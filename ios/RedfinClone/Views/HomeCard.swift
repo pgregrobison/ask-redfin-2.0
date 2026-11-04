@@ -13,12 +13,25 @@ enum HomeCardSize {
         }
     }
 
+    /// Outer card corner radius (Figma node 1927:18714: 24px on the desktop
+    /// grid card). The photo sits inset by `mattePadding` with a
+    /// concentric inner radius, giving the same "framed" card the desktop
+    /// prototype uses.
     var cornerRadius: CGFloat {
         switch self {
-        case .large, .medium: Theme.Radius.large
-        case .compact: 14
+        case .large, .medium: 24
+        case .compact: 16
         }
     }
+
+    var mattePadding: CGFloat {
+        switch self {
+        case .large, .medium: 4
+        case .compact: 3
+        }
+    }
+
+    var innerPhotoRadius: CGFloat { cornerRadius - mattePadding }
 
     var fixedWidth: CGFloat? {
         switch self {
@@ -30,24 +43,22 @@ enum HomeCardSize {
 
     var priceFont: Font {
         switch self {
-        case .large, .medium: Theme.Typography.sectionTitle
-        case .compact: Theme.Typography.headline
+        case .large, .medium: Theme.Typography.cardPrice
+        case .compact: Theme.Typography.cardPriceCompact
         }
     }
 
-    var statsFont: Font {
+    var statsFontSize: CGFloat {
         switch self {
-        case .large: Theme.Typography.secondary
-        case .medium: Theme.Typography.secondary
-        case .compact: Theme.Typography.caption
+        case .large, .medium: 14
+        case .compact: 12
         }
     }
 
-    var addressFont: Font {
+    var addressFontSize: CGFloat {
         switch self {
-        case .large: Theme.Typography.secondary
-        case .medium: Theme.Typography.secondary
-        case .compact: Theme.Typography.caption
+        case .large, .medium: 14
+        case .compact: 12
         }
     }
 
@@ -77,6 +88,7 @@ struct HomeCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             photoSection
+                .padding(size.mattePadding)
             HomeCardInfoSection(
                 listing: listing,
                 size: size,
@@ -100,7 +112,7 @@ struct HomeCard: View {
                 }
                 .allowsHitTesting(false)
             }
-            .clipShape(.rect(topLeadingRadius: size.cornerRadius, topTrailingRadius: size.cornerRadius))
+            .clipShape(.rect(cornerRadius: size.innerPhotoRadius))
             .overlay(alignment: .topLeading) {
                 if let badge {
                     badgeView(badge)
@@ -111,7 +123,7 @@ struct HomeCard: View {
 
     private func badgeView(_ badge: HomeCardBadge) -> some View {
         Text(badge.text)
-            .font(Theme.Typography.micro.bold())
+            .font(.inter(11, .bold))
             .foregroundStyle(.white)
             .padding(.horizontal, Theme.Spacing.xs)
             .padding(.vertical, Theme.Spacing.xxs)

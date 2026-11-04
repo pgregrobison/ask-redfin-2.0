@@ -81,7 +81,7 @@ struct MortgagePrequalFlowView: View {
                 Text("$").foregroundStyle(.secondary)
                 TextField("e.g. 250,000", text: $annualIncome)
                     .keyboardType(.numberPad)
-                    .font(.subheadline)
+                    .font(Theme.Typography.secondary)
                     .focused($focusedField, equals: .income)
             }
             .frame(minHeight: Theme.ButtonSize.minHeight)
@@ -102,7 +102,7 @@ struct MortgagePrequalFlowView: View {
                 Text("$").foregroundStyle(.secondary)
                 TextField("e.g. 100,000", text: $downPayment)
                     .keyboardType(.numberPad)
-                    .font(.subheadline)
+                    .font(Theme.Typography.secondary)
                     .focused($focusedField, equals: .downPayment)
             }
             .frame(minHeight: Theme.ButtonSize.minHeight)
@@ -156,19 +156,19 @@ struct MortgagePrequalFlowView: View {
 
             VStack(spacing: Theme.Spacing.sm) {
                 Text("Prequalification Complete!")
-                    .font(.title2.bold())
+                    .font(Theme.Typography.sectionTitle)
 
                 if estimatedBudget > 0 {
                     Text(formatCurrency(estimatedBudget))
                         .font(Theme.Typography.largeNumber)
                         .foregroundStyle(Theme.Colors.brandGreen)
                     Text("estimated budget")
-                        .font(.subheadline)
+                        .font(Theme.Typography.secondary)
                         .foregroundStyle(.secondary)
                 }
 
-                Text("A Redfin loan officer will reach out to finalize your prequalification.")
-                    .font(.caption)
+                Text("A Rocket loan officer will reach out to finalize your prequalification.")
+                    .font(Theme.Typography.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, Theme.Spacing.xl)
@@ -204,9 +204,9 @@ struct MortgagePrequalFlowView: View {
 
     private var summaryText: String {
         if estimatedBudget > 0, let loanType {
-            return "You're prequalified for up to \(formatCurrency(estimatedBudget)) at a \(loanType) rate — a Redfin loan officer will follow up."
+            return "You're prequalified for up to \(formatCurrency(estimatedBudget)) at a \(loanType) rate — a Rocket loan officer will follow up."
         }
-        return "You're prequalified — a Redfin loan officer will follow up to finalize the details."
+        return "You're prequalified — a Rocket loan officer will follow up to finalize the details."
     }
 
     private var progress: Double {

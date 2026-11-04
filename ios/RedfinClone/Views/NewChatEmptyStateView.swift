@@ -22,11 +22,11 @@ struct NewChatEmptyStateView: View {
                 Image(systemName: "sparkle")
                     .font(.system(size: 26, weight: .semibold))
                 Text("Ask Redfin")
-                    .font(.system(size: 32, weight: .bold))
+                    .font(.inter(32, .bold))
                 Spacer(minLength: 0)
             }
             Text("What can I help you find?")
-                .font(.title3)
+                .font(.inter(20))
                 .foregroundStyle(.secondary)
         }
     }
@@ -67,7 +67,7 @@ struct NewChatEmptyStateView: View {
         let hasFilters = !chipLabels.isEmpty
 
         EmptyStateCard {
-            onSuggestionTap(hasFilters ? buildResumePrompt(from: lastFilters!) : "Show me homes for sale in New York")
+            onSuggestionTap(hasFilters ? buildResumePrompt(from: lastFilters!) : "Show me homes for sale in Seattle")
         } label: {
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 HStack {
@@ -75,7 +75,7 @@ struct NewChatEmptyStateView: View {
                         hasFilters ? "Pick up where you left off" : "Start searching",
                         systemImage: hasFilters ? "arrow.counterclockwise" : "magnifyingglass"
                     )
-                    .font(.subheadline.weight(.semibold))
+                    .font(.inter(15, .semibold))
                     .foregroundStyle(.primary)
                     Spacer()
                     Image(systemName: "chevron.right")
@@ -88,7 +88,7 @@ struct NewChatEmptyStateView: View {
                         HStack(spacing: Theme.Spacing.xxs + 2) {
                             ForEach(chipLabels, id: \.self) { label in
                                 Text(label)
-                                    .font(.caption.weight(.semibold))
+                                    .font(.inter(12, .semibold))
                                     .foregroundStyle(.primary)
                                     .padding(.horizontal, Theme.Spacing.sm)
                                     .padding(.vertical, 5)
@@ -98,8 +98,8 @@ struct NewChatEmptyStateView: View {
                     }
                     .scrollClipDisabled()
                 } else {
-                    Text("Browse homes for sale in New York and nearby")
-                        .font(.footnote)
+                    Text("Browse homes for sale in Seattle and nearby")
+                        .font(.inter(13))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -116,7 +116,7 @@ struct NewChatEmptyStateView: View {
                     .foregroundStyle(Theme.Colors.brandRed)
                 Spacer(minLength: Theme.Spacing.xs)
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.inter(15, .semibold))
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
                     .lineLimit(2)
@@ -137,10 +137,10 @@ struct NewChatEmptyStateView: View {
                     .frame(width: 28)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.inter(15, .semibold))
                         .foregroundStyle(.primary)
                     Text(subtitle)
-                        .font(.footnote)
+                        .font(.inter(13))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.leading)
                 }

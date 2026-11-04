@@ -22,7 +22,7 @@ enum Theme {
 
     enum Colors {
         static let brandRed = Color(red: 0.78, green: 0.13, blue: 0.13)
-        static let brandGreen = Color(red: 27/255, green: 107/255, blue: 58/255)
+        static let brandGreen = Color(red: 1/255, green: 120/255, blue: 62/255)
         static let invertedPrimary = Color(.systemBackground)
 
         static let background = Color(.systemBackground)
@@ -39,8 +39,6 @@ enum Theme {
         })
 
         enum Chat {
-            static let userBubbleLight = Color(.systemGray6)
-            static let userBubbleDark = Color(red: 254/255, green: 254/255, blue: 254/255).opacity(0.12)
             static let inputCornerRadius: CGFloat = 24
         }
 
@@ -56,8 +54,47 @@ enum Theme {
         enum MapPin {
             static let selectedLight = Color(red: 0.87, green: 0.2, blue: 0.25)
             static let selectedDark = Color(red: 0.88, green: 0.23, blue: 0.23)
-            static let seenLight = Color(red: 216/255, green: 216/255, blue: 220/255)
-            static let seenDark = Color(red: 44/255, green: 44/255, blue: 46/255)
+        }
+
+        /// Rocket Mortgage-branded prequal card (Figma node 1929:19840): a
+        /// mint-green surface distinct from the app's usual neutral cards,
+        /// used only for the prequalification confirmation.
+        enum RocketCard {
+            static let background = Color(UIColor { traits in
+                traits.userInterfaceStyle == .dark
+                    ? UIColor(red: 0x0d / 255, green: 0x1f / 255, blue: 0x16 / 255, alpha: 1)
+                    : UIColor(red: 0xeb / 255, green: 0xfe / 255, blue: 0xee / 255, alpha: 1)
+            })
+            static let border = Color(UIColor { traits in
+                traits.userInterfaceStyle == .dark
+                    ? UIColor(red: 1 / 255, green: 120 / 255, blue: 62 / 255, alpha: 0.35)
+                    : UIColor(red: 0xda / 255, green: 0xee / 255, blue: 0xe2 / 255, alpha: 1)
+            })
+        }
+
+        /// Text colors lifted from the desktop prototype's listing card
+        /// (Figma node 1927:18714) so the iOS card reads as the same design.
+        enum Card {
+            static let price = Color(UIColor { traits in
+                traits.userInterfaceStyle == .dark
+                    ? UIColor(white: 0.95, alpha: 1)
+                    : UIColor(red: 0x11 / 255, green: 0x11 / 255, blue: 0x11 / 255, alpha: 1)
+            })
+            static let stats = Color(UIColor { traits in
+                traits.userInterfaceStyle == .dark
+                    ? UIColor(white: 0.78, alpha: 1)
+                    : UIColor(red: 0x3a / 255, green: 0x3a / 255, blue: 0x3a / 255, alpha: 1)
+            })
+            static let statsDot = Color(UIColor { traits in
+                traits.userInterfaceStyle == .dark
+                    ? UIColor.white.withAlphaComponent(0.2)
+                    : UIColor.black.withAlphaComponent(0.2)
+            })
+            static let address = Color(UIColor { traits in
+                traits.userInterfaceStyle == .dark
+                    ? UIColor(white: 0.55, alpha: 1)
+                    : UIColor(red: 0x71 / 255, green: 0x71 / 255, blue: 0x82 / 255, alpha: 1)
+            })
         }
 
         enum Chart {
@@ -99,22 +136,25 @@ enum Theme {
     // MARK: - Typography
 
     enum Typography {
-        static let heroPrice: Font = .largeTitle.bold()
-        static let sectionTitle: Font = .title2.bold()
-        static let cardTitle: Font = .title3.bold()
-        static let headline: Font = .headline
-        static let body: Font = .body
-        static let secondary: Font = .subheadline
-        static let secondaryBold: Font = .subheadline.bold()
-        static let caption: Font = .caption
-        static let captionBold: Font = .caption.bold()
-        static let micro: Font = .caption2
+        static let heroPrice: Font = .inter(34, .bold)
+        static let sectionTitle: Font = .inter(22, .bold)
+        static let cardTitle: Font = .inter(20, .bold)
+        static let headline: Font = .inter(17, .semibold)
+        static let body: Font = .inter(16)
+        static let secondary: Font = .inter(15)
+        static let secondaryBold: Font = .inter(15, .bold)
+        static let caption: Font = .inter(12)
+        static let captionBold: Font = .inter(12, .bold)
+        static let micro: Font = .inter(11)
 
-        static let heroNumber: Font = .system(size: 32, weight: .bold)
-        static let largeNumber: Font = .system(size: 28, weight: .bold)
-        static let decorativeXL: Font = .system(size: 48)
-        static let decorativeLG: Font = .system(size: 40)
-        static let decorativeMD: Font = .system(size: 36)
+        static let cardPrice: Font = .inter(24, .medium)
+        static let cardPriceCompact: Font = .inter(16, .medium)
+
+        static let heroNumber: Font = .inter(32, .bold)
+        static let largeNumber: Font = .inter(28, .bold)
+        static let decorativeXL: Font = .inter(48)
+        static let decorativeLG: Font = .inter(40)
+        static let decorativeMD: Font = .inter(36)
     }
 
     // MARK: - Shadows

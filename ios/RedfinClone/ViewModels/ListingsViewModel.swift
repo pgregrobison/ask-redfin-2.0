@@ -33,7 +33,14 @@ class ListingsViewModel {
     var listingStatus: ListingStatus = .forSale
     var showListView: Bool = false
     var showChat: Bool = false
-    var locationName: String = "New York City"
+    var locationName: String = "Seattle"
+
+    /// Top edge of the Find tab's floating toolbar (`FindPillOverlay` or
+    /// `FindTopBar`, whichever is active) in `.global` coordinate space, set by
+    /// `ContentView`. `FindMapView`'s map control stack reads this to
+    /// top-align itself with the toolbar regardless of which style is active
+    /// or how deep the map sits inside its own safe-area/nav-bar context.
+    var topChromeMinY: CGFloat = 0
 
     var filterMinPrice: Int? = nil
     var filterMaxPrice: Int? = nil
@@ -47,11 +54,11 @@ class ListingsViewModel {
     let locationService = LocationService()
     let notificationService = NotificationService()
     private var currentSpan = MKCoordinateSpan(latitudeDelta: 0.12, longitudeDelta: 0.12)
-    private var currentCenter = CLLocationCoordinate2D(latitude: 40.7580, longitude: -73.9855)
+    private var currentCenter = CLLocationCoordinate2D(latitude: 47.6062, longitude: -122.3321)
     private var isAnimatingCamera: Bool = false
     private var cameraAnimationTask: Task<Void, Never>?
     var mapPosition: MapCameraPosition = .region(MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 40.7580, longitude: -73.9855),
+        center: CLLocationCoordinate2D(latitude: 47.6062, longitude: -122.3321),
         span: MKCoordinateSpan(latitudeDelta: 0.12, longitudeDelta: 0.12)
     ))
 
@@ -482,6 +489,9 @@ class ListingsViewModel {
     }
 
     func updateLocationName(for region: MKCoordinateRegion) {
+        // Launch Demo: keep the search bar pinned to "Seattle" for the
+        // recorded video instead of updating as the map pans.
+        guard !DemoFixtures.isEnabled else { return }
         geocodeTask?.cancel()
         geocodeTask = Task {
             try? await Task.sleep(for: .milliseconds(500))
@@ -494,7 +504,7 @@ class ListingsViewModel {
                     let name = placemark.subLocality
                         ?? placemark.locality
                         ?? placemark.administrativeArea
-                        ?? "New York City"
+                        ?? "Seattle"
                     locationName = name
                 }
             } catch {

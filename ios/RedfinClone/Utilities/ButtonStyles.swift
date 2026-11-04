@@ -39,7 +39,7 @@ struct TextLinkButtonStyle: ButtonStyle {
 struct SmallPillButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.subheadline.weight(.semibold))
+            .font(.inter(15, .semibold))
             .foregroundStyle(Theme.Colors.invertedPrimary)
             .padding(.horizontal, Theme.ButtonSize.pillHorizontalPadding)
             .padding(.vertical, Theme.ButtonSize.compactVerticalPadding)
@@ -51,7 +51,7 @@ struct SmallPillButtonStyle: ButtonStyle {
 struct SmallPillOutlineButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.subheadline.weight(.semibold))
+            .font(.inter(15, .semibold))
             .foregroundStyle(.primary)
             .padding(.horizontal, Theme.ButtonSize.pillHorizontalPadding)
             .padding(.vertical, Theme.ButtonSize.compactVerticalPadding)

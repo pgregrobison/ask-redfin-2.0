@@ -19,6 +19,7 @@ struct AskRedfinView: View {
     @State private var photoLibrarySelection: [PhotosPickerItem] = []
     @State private var showPhotoLibrary: Bool = false
     @State private var cameraMode: ChatCameraPicker.Mode? = nil
+    @State private var didStartAutoplay = false
 
     @Environment(\.horizontalSizeClass) private var hSizeClass
 
@@ -30,9 +31,15 @@ struct AskRedfinView: View {
         .background(Theme.Colors.background)
         .environment(\.horizontalSizeClass, .regular)
         .presentationDragIndicator(.visible)
+        .presentationCornerRadius(36)
         .presentationDetents(mapFocusActive ? [.fraction(0.7), .large] : [.large], selection: $selectedDetent)
         .presentationContentInteraction(mapFocusActive && selectedDetent != .large ? .resizes : .scrolls)
         .presentationBackgroundInteraction(mapFocusActive ? .enabled(upThrough: .fraction(0.7)) : .automatic)
+        .onAppear {
+            guard DemoFixtures.isEnabled, !didStartAutoplay else { return }
+            didStartAutoplay = true
+            Task { await chatViewModel.runDemoAutoplay() }
+        }
     }
 
     private var headerBar: some View {
@@ -61,7 +68,12 @@ struct AskRedfinView: View {
 
     @ViewBuilder
     private var threadSwitcherMenu: some View {
-        if #available(iOS 26.0, *) {
+        // Figma's chat sheet (node 395:999) has an empty leading slot — match
+        // that exactly for the recorded demo; everyday multi-thread use keeps
+        // the real thread switcher.
+        if DemoFixtures.isEnabled {
+            EmptyView()
+        } else if #available(iOS 26.0, *) {
             threadSwitcherMenuContent
                 .glassEffect(in: .capsule)
         } else {
@@ -94,22 +106,26 @@ struct AskRedfinView: View {
                 }
             }
         } label: {
-            HStack(spacing: Theme.Spacing.xxs + 2) {
-                if chatViewModel.isTourDayThread {
-                    Image(systemName: "car")
-                        .font(.system(size: Theme.Spacing.sm, weight: .semibold))
-                }
-                Text(truncatedTitle)
-                    .font(.subheadline.bold())
-                    .lineLimit(1)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: Theme.Spacing.xs + 2, weight: .semibold))
-            }
-            .foregroundStyle(.primary)
-            .frame(height: Theme.ButtonSize.minHeight)
-            .padding(.horizontal, Theme.Spacing.sm + 2)
+            threadTitleLabel
         }
         .tint(.primary)
+    }
+
+    private var threadTitleLabel: some View {
+        HStack(spacing: Theme.Spacing.xxs + 2) {
+            if chatViewModel.isTourDayThread {
+                Image(systemName: "car")
+                    .font(.system(size: Theme.Spacing.sm, weight: .semibold))
+            }
+            Text(truncatedTitle)
+                .font(Theme.Typography.secondaryBold)
+                .lineLimit(1)
+            Image(systemName: "chevron.down")
+                .font(.system(size: Theme.Spacing.xs + 2, weight: .semibold))
+        }
+        .foregroundStyle(.primary)
+        .frame(height: Theme.ButtonSize.minHeight)
+        .padding(.horizontal, Theme.Spacing.sm + 2)
     }
 
     private var isEmptyChat: Bool {
@@ -119,7 +135,7 @@ struct AskRedfinView: View {
     private var messageList: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(spacing: Theme.Spacing.md) {
+                LazyVStack(spacing: Theme.Spacing.md) {
                     Color.clear.frame(height: 0)
 
                     if isEmptyChat {
@@ -132,7 +148,12 @@ struct AskRedfinView: View {
                         )
                         .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
                     } else {
-                        chatTitleHeader
+                        // Figma's chat sheet (node 395:999) shows no title row above
+                        // messages at all — match that exactly for the recorded demo,
+                        // while keeping it for everyday multi-thread use.
+                        if !DemoFixtures.isEnabled {
+                            chatTitleHeader
+                        }
                         ForEach(chatViewModel.activeMessages) { message in
                             ChatMessageBubble(
                                 message: message,
@@ -251,7 +272,7 @@ struct AskRedfinView: View {
                 .font(.system(size: 26, weight: .semibold))
                 .foregroundStyle(.primary)
             Text("Ask Redfin")
-                .font(.system(size: 32, weight: .bold))
+                .font(Theme.Typography.heroNumber)
                 .foregroundStyle(.primary)
             Spacer(minLength: 0)
         }
@@ -265,7 +286,7 @@ struct AskRedfinView: View {
     }
 
     private var showAttachButton: Bool {
-        isInputFocused && !chatViewModel.isVoiceModeActive
+        !DemoFixtures.isEnabled && isInputFocused && !chatViewModel.isVoiceModeActive
     }
 
     private var inputFooter: some View {
@@ -382,13 +403,18 @@ struct AskRedfinView: View {
                         isInputFocused = true
                     }
                 }
+                .onChange(of: chatViewModel.requestInputFocus) { _, requested in
+                    guard requested else { return }
+                    isInputFocused = true
+                    chatViewModel.requestInputFocus = false
+                }
                 .disabled(chatViewModel.isVoiceModeActive)
                 .opacity(chatViewModel.isVoiceModeActive ? 0.4 : 1)
                 .onSubmit {
                     sendAndScroll()
                 }
                 .padding(.leading, Theme.Spacing.md)
-                .padding(.trailing, chatViewModel.isVoiceModeActive ? Theme.Spacing.sm : 54)
+                .padding(.trailing, chatViewModel.isVoiceModeActive ? Theme.Spacing.sm : 58)
                 .padding(.vertical, Theme.Spacing.sm)
                 .background(
                     inputBackground
@@ -420,7 +446,7 @@ struct AskRedfinView: View {
                                         .clipShape(Circle())
                                 }
                                 .transition(.scale.combined(with: .opacity))
-                            } else {
+                            } else if !DemoFixtures.isEnabled {
                                 Button {
                                     isInputFocused = false
                                     chatViewModel.activateVoiceMode()

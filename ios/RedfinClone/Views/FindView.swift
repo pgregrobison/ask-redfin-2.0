@@ -10,6 +10,7 @@ struct FindView: View {
     var showShimmer: Bool = false
     var accessoryMode: Bool = false
     var hideProfileButton: Bool = false
+    var hideListToggle: Bool = false
     @Environment(\.askRedfinContext) private var askRedfinContext
 
     var body: some View {
@@ -27,13 +28,15 @@ struct FindView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if isActive {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        viewModel.dismissOverlay()
-                        viewModel.showListView.toggle()
-                    } label: {
-                        Image(systemName: viewModel.showListView ? "map" : "list.bullet")
-                            .font(.system(size: Theme.IconSize.medium, weight: .semibold))
+                if !hideListToggle {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            viewModel.dismissOverlay()
+                            viewModel.showListView.toggle()
+                        } label: {
+                            Image(systemName: viewModel.showListView ? "map" : "list.bullet")
+                                .font(.system(size: Theme.IconSize.medium, weight: .semibold))
+                        }
                     }
                 }
                 if viewModel.showListView {

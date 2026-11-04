@@ -179,12 +179,12 @@ struct FilterSheetView: View {
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(suggestion.title)
-                                .font(.subheadline.weight(.medium))
+                                .font(.inter(15, .medium))
                                 .foregroundStyle(.primary)
                                 .lineLimit(1)
                             if !suggestion.subtitle.isEmpty {
                                 Text(suggestion.subtitle)
-                                    .font(.caption)
+                                    .font(Theme.Typography.caption)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(1)
                             }
@@ -439,7 +439,7 @@ struct FilterSheetView: View {
             )
 
             Text("–")
-                .font(.subheadline)
+                .font(Theme.Typography.secondary)
                 .foregroundStyle(.tertiary)
 
             singleDropdown(
@@ -498,7 +498,7 @@ struct FilterSheetView: View {
                     }
                 } label: {
                     Text(labelForValue(value))
-                        .font(.subheadline.weight(isSelected ? .semibold : .regular))
+                        .font(.inter(15, isSelected ? .semibold : .regular))
                         .foregroundStyle(isSelected ? Color(.systemBackground) : .primary)
                         .frame(maxWidth: .infinity)
                         .frame(height: tileHeight)
@@ -514,7 +514,7 @@ struct FilterSheetView: View {
 
     private func chipLabel(_ text: String, isSelected: Bool) -> some View {
         Text(text)
-            .font(.subheadline.weight(isSelected ? .semibold : .regular))
+            .font(.inter(15, isSelected ? .semibold : .regular))
             .foregroundStyle(isSelected ? Color(.systemBackground) : .primary)
             .padding(.horizontal, Theme.Spacing.sm)
             .frame(maxWidth: .infinity)
@@ -527,7 +527,7 @@ struct FilterSheetView: View {
 
     private func sectionLabel(_ text: String) -> some View {
         Text(text)
-            .font(.subheadline)
+            .font(Theme.Typography.secondary)
             .foregroundStyle(.primary)
     }
 

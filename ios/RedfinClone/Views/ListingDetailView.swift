@@ -96,7 +96,7 @@ struct ListingDetailView: View {
             ToolbarItem(placement: .principal) {
                 if let index = focusedPhotoIndex {
                     Text("\(index + 1) of \(listing.photos.count)")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.inter(15, .semibold))
                         .foregroundStyle(.white)
                 }
             }
