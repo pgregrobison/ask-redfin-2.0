@@ -9,6 +9,12 @@ Guiding rule: match the prototype's *behavior and look*, but build it with the n
 - **My home tab:** becomes Dream Home. Homeowner/seller dashboard + Open to Offers stubs are removed (kept in git history).
 - **Font:** WNTL Text (woff2 → OTF/TTF), Inter removed.
 - **Data:** prototype's 335 Seattle listings + 14 exterior photos + region polygons replace MockData; existing local house photos may be reused to add variety.
+- **Native first (added mid-Phase 2):** wherever Apple's HIG defines a control, use the native SwiftUI one, styled with Nova font, icons and tokens. Floating Nova blur becomes Liquid Glass.
+  - Buttons: native `.glassProminent` / `.glass` (bordered on iOS 18), tinted Nova gray-800, capsule, Nova font.
+  - Filters sheet: native grouped `Form` with segmented beds/baths, menu pickers, toggle rows and a checklist for home type.
+  - Price range: keep the custom histogram + dual slider (there's no native range slider).
+  - Chat: feedback goes in a long-press context menu, "Tell us more" is a native sheet, Chats is a native `Menu`. The in-bar toast and reply bubble stay custom, on glass.
+  - Nova-only patterns (tags, badges, cards, filter pills) stay Nova.
 - **Before starting:** commit the current uncommitted work (41 files) as a checkpoint so the Nova migration diff is reviewable on its own.
 
 ---

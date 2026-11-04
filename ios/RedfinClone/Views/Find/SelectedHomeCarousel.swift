@@ -74,7 +74,7 @@ private struct SelectedHomeCard: View {
             .buttonStyle(.plain)
             .overlay(alignment: .topLeading) { badges.padding(12) }
             .overlay(alignment: .topTrailing) {
-                GlassActionButton(icon: "xmark", action: onClose)
+                GlassActionButton(icon: "close", action: onClose, nova: true)
                     .padding(8)
                     .accessibilityLabel("Close")
             }

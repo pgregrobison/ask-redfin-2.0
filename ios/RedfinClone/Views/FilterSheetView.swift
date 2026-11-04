@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// The iOS Vision Filters sheet: view, sort, criteria, price, home type,
-/// beds, baths, square feet, HOA and features. Changes apply live; the
-/// footer shows the live count.
+/// The iOS Vision Filters sheet as a native grouped Form: view and sort,
+/// criteria (with how each one counts), price, rooms, home type, size, HOA
+/// and features. Changes apply live; the footer shows the live count.
 struct FilterSheetView: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var viewModel: ListingsViewModel
@@ -15,87 +15,99 @@ struct FilterSheetView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    section { viewToggle }
-                    section { sortChips }
-                    if !viewModel.search.criteria.isEmpty {
-                        section { criteriaChips }
+            Form {
+                Section {
+                    Picker("View", selection: viewBinding) {
+                        Text("Map").tag(false)
+                        Text("List").tag(true)
                     }
-                    section {
-                        FilterGroup("Price range") {
-                            PriceRangeControl(minPrice: filters.minPrice, maxPrice: filters.maxPrice, listings: viewModel.listings)
-                        }
+                    .pickerStyle(.segmented)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                }
+
+                Section {
+                    Picker("Sort by", selection: $viewModel.search.sort) {
+                        ForEach(sortOptions, id: \.0) { sort, title in Text(title).tag(sort) }
                     }
-                    section {
-                        FilterGroup("Home type") {
-                            ChipToggleRow(options: HomeCatalog.homeTypes, selection: filters.types)
+                }
+
+                if !viewModel.search.criteria.isEmpty {
+                    Section {
+                        ForEach(viewModel.search.criteria, id: \.self) { c in
+                            Picker(viewModel.search.pillLabel(for: c), selection: modeBinding(c)) {
+                                Text("Nice to have").tag(CriterionMode.nice)
+                                Text("Must have").tag(CriterionMode.must)
+                                Text("Dealbreaker").tag(CriterionMode.deal)
+                            }
                         }
+                        .onDelete { offsets in
+                            let removed = offsets.map { viewModel.search.criteria[$0] }
+                            viewModel.changeSearch { s in
+                                s.criteria.removeAll { removed.contains($0) }
+                                removed.forEach { s.modes[$0] = nil; s.disabled.remove($0) }
+                            }
+                        }
+                    } header: {
+                        Text("What matters to you")
+                    } footer: {
+                        Text("Homes are ranked by how many of these they match. Swipe to remove one, or add more from the search bar.")
                     }
-                    section { RoomsControl(beds: filters.beds, baths: filters.baths) }
-                    section { squareFeet }
-                    section {
-                        FilterGroup("HOA fees") {
-                            menuPicker(Self.hoaOptions, selection: filters.hoa)
-                        }
+                }
+
+                Section("Price range") {
+                    PriceRangeControl(minPrice: filters.minPrice, maxPrice: filters.maxPrice, listings: viewModel.listings)
+                        .padding(.vertical, 8)
+                }
+
+                Section {
+                    RoomsControl(beds: filters.beds, baths: filters.baths)
+                        .padding(.vertical, 4)
+                    NavigationLink {
+                        HomeTypeChecklist(types: filters.types)
+                    } label: {
+                        LabeledContent("Home type", value: homeTypeSummary)
                     }
-                    section(divider: false) {
-                        FilterGroup("Features") {
-                            ChipToggleRow(options: HomeCatalog.features, selection: filters.features)
-                        }
+                    Picker("Min square feet", selection: filters.minSqft) {
+                        ForEach(Self.sqftMins, id: \.0) { Text($0.1).tag($0.0) }
+                    }
+                    Picker("Max square feet", selection: filters.maxSqft) {
+                        ForEach(Self.sqftMaxes, id: \.0) { Text($0.1).tag($0.0) }
+                    }
+                    Picker("HOA fees", selection: filters.hoa) {
+                        ForEach(Self.hoaOptions, id: \.0) { Text($0.1).tag($0.0) }
+                    }
+                }
+
+                Section("Features") {
+                    ForEach(HomeCatalog.features, id: \.self) { feature in
+                        Toggle(feature, isOn: featureBinding(feature))
+                            .tint(Nova.Color.green600)
                     }
                 }
             }
-            .scrollDismissesKeyboard(.immediately)
+            .font(Nova.Typography.body16)
+            .tint(Nova.Color.gray800)
             .navigationTitle("Filters")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { dismiss() } label: { Image(systemName: "xmark") }
-                        .accessibilityLabel("Close")
-                }
+                ToolbarItem(placement: .topBarTrailing) { closeButton }
             }
             .safeAreaInset(edge: .bottom) { footer }
         }
-        .tint(Nova.Color.text)
     }
 
-    // MARK: Sections
+    // MARK: Bindings
 
-    private func section<Content: View>(divider: Bool = true, @ViewBuilder _ content: () -> Content) -> some View {
-        VStack(spacing: 0) {
-            content().padding(24)
-            if divider { Rectangle().fill(Nova.Color.border).frame(height: 1) }
-        }
-    }
-
-    private var viewToggle: some View {
-        FilterGroup("View") {
-            Picker("View", selection: Binding(
-                get: { viewModel.showListView },
-                set: { list in
-                    viewModel.dismissOverlay()
-                    viewModel.showListView = list
-                    dismiss()
-                }
-            )) {
-                Label("Map", systemImage: "map").tag(false)
-                Label("List", systemImage: "list.bullet").tag(true)
+    private var viewBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.showListView },
+            set: { list in
+                viewModel.dismissOverlay()
+                viewModel.showListView = list
+                dismiss()
             }
-            .pickerStyle(.segmented)
-        }
-    }
-
-    private var sortChips: some View {
-        FilterGroup("Sort by") {
-            FlowLayout(spacing: 8) {
-                ForEach(sortOptions, id: \.0) { sort, title in
-                    NovaChip(title: title, isSelected: viewModel.search.sort == sort, style: .outline) {
-                        viewModel.search.sort = sort
-                    }
-                }
-            }
-        }
+        )
     }
 
     private var sortOptions: [(SearchSort, String)] {
@@ -104,66 +116,39 @@ struct FilterSheetView: View {
         return out
     }
 
-    private var criteriaChips: some View {
-        FilterGroup("What matters to you", subtitle: "Homes are ranked by how many of these they match. Add more from the search bar.") {
-            FlowLayout(spacing: 8) {
-                ForEach(viewModel.search.criteria, id: \.self) { c in
-                    Button {
-                        withAnimation(Nova.Motion.easeOut()) {
-                            _ = viewModel.changeSearch { s in
-                                s.criteria.removeAll { $0 == c }
-                                s.modes[c] = nil
-                                s.disabled.remove(c)
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text(viewModel.search.pillLabel(for: c)).font(Nova.Typography.label14)
-                            NovaIcon("close", size: 16)
-                        }
-                        .padding(.horizontal, 14)
-                        .frame(height: 32)
-                        .foregroundStyle(Nova.Color.text)
-                        .background(Nova.Color.overlay, in: Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Remove \(c)")
-                }
-            }
-        }
+    private func modeBinding(_ c: String) -> Binding<CriterionMode> {
+        Binding(
+            get: { viewModel.search.mode(of: c) },
+            set: { mode in viewModel.changeSearch { $0.modes[c] = mode == .nice ? nil : mode } }
+        )
     }
 
-    private var squareFeet: some View {
-        FilterGroup("Square feet") {
-            HStack(spacing: 12) {
-                menuPicker(Self.sqftMins, selection: filters.minSqft)
-                Rectangle().fill(Nova.Color.borderEmphasis).frame(width: 8, height: 1)
-                menuPicker(Self.sqftMaxes, selection: filters.maxSqft)
+    private func featureBinding(_ feature: String) -> Binding<Bool> {
+        Binding(
+            get: { viewModel.search.filters.features.contains(feature) },
+            set: { on in
+                viewModel.search.filters.features.removeAll { $0 == feature }
+                if on { viewModel.search.filters.features.append(feature) }
             }
-        }
+        )
     }
 
-    private func menuPicker(_ options: [(Int, String)], selection: Binding<Int>) -> some View {
-        Menu {
-            Picker("", selection: selection) {
-                ForEach(options, id: \.0) { value, title in Text(title).tag(value) }
-            }
-        } label: {
-            HStack {
-                Text(options.first { $0.0 == selection.wrappedValue }?.1 ?? options[0].1)
-                    .font(Nova.Typography.body16)
-                Spacer()
-                NovaIcon("expand_more", size: 16)
-            }
-            .foregroundStyle(Nova.Color.text)
-            .padding(.horizontal, 16)
-            .frame(height: 48)
-            .frame(maxWidth: .infinity)
-            .background(Nova.Color.bgSecondary, in: RoundedRectangle(cornerRadius: Nova.Radius.field))
-        }
+    private var homeTypeSummary: String {
+        let t = viewModel.search.filters.types
+        return t.isEmpty ? "Any" : t.joined(separator: ", ")
     }
 
-    // MARK: Footer
+    // MARK: Chrome
+
+    @ViewBuilder
+    private var closeButton: some View {
+        if #available(iOS 26.0, *) {
+            Button(role: .close) { dismiss() } label: { NovaIcon("close", size: 20) }
+        } else {
+            Button { dismiss() } label: { NovaIcon("close", size: 20) }
+                .accessibilityLabel("Close")
+        }
+    }
 
     private var footer: some View {
         HStack {
@@ -178,12 +163,43 @@ struct FilterSheetView: View {
             .buttonStyle(.novaLink)
             Spacer()
             Button("Show \(viewModel.rankedResults.count) homes") { dismiss() }
-                .buttonStyle(.nova(.primary))
+                .buttonStyle(.nova(.primary, size: .large))
                 .contentTransition(.numericText())
                 .animation(Nova.Motion.easeOut(), value: viewModel.rankedResults.count)
         }
-        .padding(EdgeInsets(top: 12, leading: 24, bottom: 12, trailing: 16))
-        .background(Nova.Color.bgPrimary)
-        .overlay(alignment: .top) { Rectangle().fill(Nova.Color.border).frame(height: 1) }
+        .padding(EdgeInsets(top: 12, leading: 24, bottom: 8, trailing: 16))
+        .background(.bar)
+    }
+}
+
+/// Native multi-select checklist for home types.
+private struct HomeTypeChecklist: View {
+    @Binding var types: [String]
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(HomeCatalog.homeTypes, id: \.self) { type in
+                    Button {
+                        if let i = types.firstIndex(of: type) { types.remove(at: i) } else { types.append(type) }
+                    } label: {
+                        HStack {
+                            Text(type).foregroundStyle(Nova.Color.text)
+                            Spacer()
+                            if types.contains(type) {
+                                NovaIcon("check", size: 20).foregroundStyle(Nova.Color.text)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .accessibilityAddTraits(types.contains(type) ? .isSelected : [])
+                }
+            } footer: {
+                Text("Leave all unchecked to see every home type.")
+            }
+        }
+        .font(Nova.Typography.body16)
+        .navigationTitle("Home type")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }

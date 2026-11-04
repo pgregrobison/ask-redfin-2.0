@@ -124,51 +124,26 @@ struct RangeSlider: View {
     }
 }
 
-/// Wrapping row of single-select chips ("Any", "1+", ...).
-struct ChipChoiceRow<Value: Hashable>: View {
-    let options: [(Value, String)]
-    @Binding var selection: Value
-
-    var body: some View {
-        FlowLayout(spacing: 8) {
-            ForEach(options, id: \.0) { value, title in
-                NovaChip(title: title, isSelected: selection == value, style: .outline) {
-                    selection = value
-                }
-            }
-        }
-    }
-}
-
-/// Wrapping row of multi-select chips (home types, features).
-struct ChipToggleRow: View {
-    let options: [String]
-    @Binding var selection: [String]
-
-    var body: some View {
-        FlowLayout(spacing: 8) {
-            ForEach(options, id: \.self) { option in
-                NovaChip(title: option, isSelected: selection.contains(option), style: .outline) {
-                    if let i = selection.firstIndex(of: option) { selection.remove(at: i) } else { selection.append(option) }
-                }
-            }
-        }
-    }
-}
-
-/// Beds and Baths chip groups.
+/// Beds and Baths as native segmented controls.
 struct RoomsControl: View {
     @Binding var beds: Int
     @Binding var baths: Double
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            FilterGroup("Beds") {
-                ChipChoiceRow(options: [(0, "Any"), (1, "1+"), (2, "2+"), (3, "3+"), (4, "4+")], selection: $beds)
+        VStack(alignment: .leading, spacing: 16) {
+            segmented("Beds", [(0, "Any"), (1, "1+"), (2, "2+"), (3, "3+"), (4, "4+")], $beds)
+            segmented("Baths", [(0.0, "Any"), (1.0, "1+"), (1.5, "1.5+"), (2.0, "2+"), (3.0, "3+")], $baths)
+        }
+    }
+
+    private func segmented<V: Hashable>(_ title: String, _ options: [(V, String)], _ selection: Binding<V>) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title).font(Nova.Typography.label16).foregroundStyle(Nova.Color.text)
+            Picker(title, selection: selection) {
+                ForEach(options, id: \.0) { Text($0.1).tag($0.0) }
             }
-            FilterGroup("Baths") {
-                ChipChoiceRow(options: [(0.0, "Any"), (1.0, "1+"), (1.5, "1.5+"), (2.0, "2+"), (3.0, "3+")], selection: $baths)
-            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
         }
     }
 }
@@ -196,45 +171,5 @@ struct FilterGroup<Content: View>: View {
             content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-/// Left-aligned wrapping layout for chips.
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let rows = arrange(width: proposal.width ?? .infinity, subviews: subviews)
-        return CGSize(width: proposal.width ?? rows.map(\.width).max() ?? 0, height: rows.last.map { $0.y + $0.height } ?? 0)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        for row in arrange(width: bounds.width, subviews: subviews) {
-            var x = bounds.minX
-            for i in row.items {
-                let size = subviews[i].sizeThatFits(.unspecified)
-                subviews[i].place(at: CGPoint(x: x, y: bounds.minY + row.y), proposal: ProposedViewSize(size))
-                x += size.width + spacing
-            }
-        }
-    }
-
-    private struct Row { var items: [Int] = []; var width: CGFloat = 0; var y: CGFloat = 0; var height: CGFloat = 0 }
-
-    private func arrange(width: CGFloat, subviews: Subviews) -> [Row] {
-        var rows: [Row] = [Row()]
-        for i in subviews.indices {
-            let size = subviews[i].sizeThatFits(.unspecified)
-            if !rows[rows.count - 1].items.isEmpty && rows[rows.count - 1].width + spacing + size.width > width {
-                let last = rows[rows.count - 1]
-                rows.append(Row(y: last.y + last.height + spacing))
-            }
-            var row = rows[rows.count - 1]
-            row.width += (row.items.isEmpty ? 0 : spacing) + size.width
-            row.height = max(row.height, size.height)
-            row.items.append(i)
-            rows[rows.count - 1] = row
-        }
-        return rows
     }
 }

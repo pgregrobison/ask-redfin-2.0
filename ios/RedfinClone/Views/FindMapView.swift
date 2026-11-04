@@ -184,7 +184,7 @@ private struct MapControls: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            GlassActionMenuButton(icon: "square.3.layers.3d") {
+            GlassActionMenuButton(icon: "layers", menuContent: {
                 Section("Map style") {
                     Picker("Map style", selection: $viewModel.mapStyle) {
                         ForEach(ListingsViewModel.MapStyleOption.allCases) { style in
@@ -195,12 +195,12 @@ private struct MapControls: View {
                     .labelsHidden()
                 }
                 Toggle("3D view", isOn: $viewModel.isMap3D)
-            }
+            }, nova: true)
             .accessibilityLabel("Map style")
 
-            GlassActionButton(icon: viewModel.locationService.isTrackingUser ? "location.fill" : "location") {
-                viewModel.locateUser()
-            }
+            GlassActionButton(icon: "current_location", action: { viewModel.locateUser() },
+                              foregroundColor: viewModel.locationService.isTrackingUser ? Nova.Color.infoPrimary : Nova.Color.text,
+                              nova: true)
             .accessibilityLabel("Show my location")
         }
         .animation(nil, value: viewModel.selectedListing != nil)

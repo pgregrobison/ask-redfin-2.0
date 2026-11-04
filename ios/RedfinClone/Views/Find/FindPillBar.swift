@@ -163,13 +163,23 @@ struct FindPillBar: View {
             }
         }
         // Long-press sets how it counts (the prototype's unwired mode sheet).
+        // Long-press sets how it counts (the prototype's unwired mode sheet).
         .contextMenu {
-            Section("How “\(c)” counts") {
-                modeButton(c, .nice, "Nice to have", "Counts toward the match score")
-                modeButton(c, .must, "Must have", "Hides homes that don’t mention it")
-                modeButton(c, .deal, "Dealbreaker", "Hides homes that mention it")
+            Picker("How “\(c)” counts", selection: Binding(
+                get: { s.mode(of: c) },
+                set: { mode in
+                    viewModel.changeSearch { st in
+                        st.modes[c] = mode == .nice ? nil : mode
+                        st.disabled.remove(c)
+                    }
+                }
+            )) {
+                Text("Nice to have\nCounts toward the match score").tag(CriterionMode.nice)
+                Text("Must have\nHides homes that don’t mention it").tag(CriterionMode.must)
+                Text("Dealbreaker\nHides homes that mention it").tag(CriterionMode.deal)
             }
-            Button("Remove", systemImage: "trash", role: .destructive) {
+            .pickerStyle(.inline)
+            Button(role: .destructive) {
                 withAnimation(Nova.Motion.easeOut()) {
                     _ = viewModel.changeSearch { st in
                         st.criteria.removeAll { $0 == c }
@@ -177,22 +187,8 @@ struct FindPillBar: View {
                         st.disabled.remove(c)
                     }
                 }
-            }
-        }
-    }
-
-    private func modeButton(_ c: String, _ mode: CriterionMode, _ title: String, _ subtitle: String) -> some View {
-        Button {
-            viewModel.changeSearch { st in
-                st.modes[c] = mode == .nice ? nil : mode
-                st.disabled.remove(c)
-            }
-        } label: {
-            Label {
-                Text(title)
-                Text(subtitle)
-            } icon: {
-                if s.mode(of: c) == mode { Image(systemName: "checkmark") }
+            } label: {
+                Label { Text("Remove") } icon: { Image("Nova/delete") }
             }
         }
     }
@@ -259,64 +255,43 @@ private struct PillPressStyle<S: Shape>: ButtonStyle {
 
 // MARK: - Location popover
 
-/// Search field over the place list; tap to add or remove an area
-/// (the last one can't be removed). Order freezes while open.
+/// Native searchable list of places; tap to add or remove an area (the
+/// last one can't be removed). Order freezes while open.
 struct LocationSearchPopover: View {
     @Bindable var viewModel: ListingsViewModel
     @State private var query = ""
     @State private var frozenOrder: [String] = []
-    @FocusState private var focused: Bool
 
     private var places: [SearchRegions.Place] {
         let all = SearchRegions.shared.places
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
         if !q.isEmpty {
-            return all.filter { $0.name.lowercased().contains(q) || $0.kind.lowercased().contains(q) }.prefix(8).map { $0 }
+            return all.filter { $0.name.lowercased().contains(q) || $0.kind.lowercased().contains(q) }
         }
         return frozenOrder.compactMap { n in all.first { $0.name == n } }
     }
 
     var body: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                NovaIcon("search", size: 20).foregroundStyle(Nova.Color.textSubtle)
-                TextField("Add a city, neighborhood, ZIP or school", text: $query)
-                    .font(Nova.Typography.body16)
-                    .focused($focused)
-                    .submitLabel(.search)
-                    .autocorrectionDisabled()
-                if !query.isEmpty {
-                    Button { query = "" } label: { NovaIcon("close", size: 16) }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Clear")
-                }
-            }
-            .padding(.horizontal, 12)
-            .frame(height: 44)
-            .background(Color(red: 118 / 255, green: 118 / 255, blue: 128 / 255).opacity(0.12), in: RoundedRectangle(cornerRadius: Nova.Radius.field))
-
-            if places.isEmpty {
-                Text("No matching places.")
-                    .font(Nova.Typography.body14)
-                    .foregroundStyle(Nova.Color.textSubtle)
-                    .frame(maxWidth: .infinity, minHeight: 60)
-            } else {
-                ScrollView {
-                    VStack(spacing: 0) {
-                        ForEach(places, id: \.name) { place in row(place) }
+        NavigationStack {
+            List(places, id: \.name) { place in row(place) }
+                .listStyle(.plain)
+                .overlay {
+                    if places.isEmpty {
+                        ContentUnavailableView.search(text: query)
                     }
                 }
-                .scrollBounceBehavior(.basedOnSize)
-            }
+                .searchable(text: $query,
+                            placement: .navigationBarDrawer(displayMode: .always),
+                            prompt: "Add a city, neighborhood, ZIP or school")
+                .navigationTitle("Search area")
+                .navigationBarTitleDisplayMode(.inline)
         }
-        .padding(12)
-        .frame(width: 340)
-        .frame(maxHeight: 420)
+        .font(Nova.Typography.body16)
+        .frame(width: 360, height: 440)
         .onAppear {
             let selected = viewModel.search.locations
             let rest = SearchRegions.shared.places.map(\.name).filter { !selected.contains($0) }
             frozenOrder = Array((selected + rest).prefix(max(6, selected.count)))
-            focused = true
         }
     }
 
@@ -327,20 +302,18 @@ struct LocationSearchPopover: View {
         } label: {
             HStack(spacing: 12) {
                 NovaIcon(place.icon, size: 24)
-                    .frame(width: 48, height: 48)
+                    .frame(width: 40, height: 40)
                     .background(Nova.Color.bgTertiary, in: RoundedRectangle(cornerRadius: Nova.Radius.field))
                 VStack(alignment: .leading, spacing: 0) {
                     Text(place.name).font(Nova.Typography.label16)
                     Text(place.kind).font(Nova.Typography.caption12).foregroundStyle(Nova.Color.textSubtle)
                 }
                 Spacer()
-                if isOn { NovaIcon("check", size: 24) }
+                if isOn { NovaIcon("check", size: 20) }
             }
             .foregroundStyle(Nova.Color.text)
-            .padding(.vertical, 6)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
         .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 

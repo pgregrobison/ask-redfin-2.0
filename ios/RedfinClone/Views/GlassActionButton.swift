@@ -6,11 +6,21 @@ struct GlassActionButton: View {
     var foregroundColor: Color = .primary
     var size: CGFloat = Theme.IconSize.mediumTap
 
+    /// `nova: true` draws a Nova icon (asset name) instead of an SF Symbol.
+    var nova = false
+
+    @ViewBuilder private var glyph: some View {
+        if nova {
+            NovaIcon(icon, size: 24)
+        } else {
+            Image(systemName: icon).font(.system(size: Theme.IconSize.medium, weight: .semibold))
+        }
+    }
+
     var body: some View {
         if #available(iOS 26.0, *) {
             Button(action: action) {
-                Image(systemName: icon)
-                    .font(.system(size: Theme.IconSize.medium, weight: .semibold))
+                glyph
                     .foregroundStyle(foregroundColor)
                     .frame(width: size, height: size)
                     .contentShape(Circle())
@@ -19,8 +29,7 @@ struct GlassActionButton: View {
             .glassEffect(.regular.interactive(), in: .circle)
         } else {
             Button(action: action) {
-                Image(systemName: icon)
-                    .font(.system(size: Theme.IconSize.medium, weight: .semibold))
+                glyph
                     .foregroundStyle(foregroundColor)
                     .frame(width: size, height: size)
                     .background(.ultraThinMaterial, in: Circle())
@@ -35,13 +44,23 @@ struct GlassActionMenuButton<MenuContent: View>: View {
     @ViewBuilder let menuContent: () -> MenuContent
     var foregroundColor: Color = .primary
 
+    /// `nova: true` draws a Nova icon (asset name) instead of an SF Symbol.
+    var nova = false
+
+    @ViewBuilder private var glyph: some View {
+        if nova {
+            NovaIcon(icon, size: 24)
+        } else {
+            Image(systemName: icon).font(.system(size: Theme.IconSize.medium, weight: .semibold))
+        }
+    }
+
     var body: some View {
         if #available(iOS 26.0, *) {
             Menu {
                 menuContent()
             } label: {
-                Image(systemName: icon)
-                    .font(.system(size: Theme.IconSize.medium, weight: .semibold))
+                glyph
                     .foregroundStyle(foregroundColor)
                     .frame(width: Theme.IconSize.mediumTap, height: Theme.IconSize.mediumTap)
                     .contentShape(Circle())
@@ -51,8 +70,7 @@ struct GlassActionMenuButton<MenuContent: View>: View {
             Menu {
                 menuContent()
             } label: {
-                Image(systemName: icon)
-                    .font(.system(size: Theme.IconSize.medium, weight: .semibold))
+                glyph
                     .foregroundStyle(foregroundColor)
                     .frame(width: Theme.IconSize.mediumTap, height: Theme.IconSize.mediumTap)
                     .background(.ultraThinMaterial, in: Circle())
