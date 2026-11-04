@@ -26,7 +26,7 @@ struct MapPinView: View {
 
     private var selectedPin: some View {
         Text(listing.formattedPrice)
-            .font(.inter(Theme.IconSize.mapPin, .bold))
+            .font(.novaFixed(Theme.IconSize.mapPin, .demibold))
             .tracking(-0.3)
             .foregroundStyle(.white)
             .padding(.horizontal, Theme.MapPin.horizontalPadding)
@@ -41,7 +41,7 @@ struct MapPinView: View {
     private var defaultPin: some View {
         VStack(spacing: 0) {
             Text(listing.formattedPrice)
-                .font(.inter(Theme.IconSize.mapPin, .medium))
+                .font(.novaFixed(Theme.IconSize.mapPin, .medium))
                 .tracking(-0.3)
                 .foregroundStyle(.white)
                 .padding(.horizontal, Theme.MapPin.horizontalPadding)

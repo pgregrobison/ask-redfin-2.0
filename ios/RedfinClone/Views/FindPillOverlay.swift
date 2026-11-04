@@ -36,12 +36,11 @@ struct FindPillOverlay: View {
 
                     VStack(alignment: showLocationMenu ? .leading : .center, spacing: 1) {
                         Text(viewModel.locationName)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
+                            .font(Nova.Typography.label14)
                             .foregroundStyle(.primary)
                             .lineLimit(1)
                         Text("\(viewModel.filteredListings.count) homes")
-                            .font(.caption2)
+                            .font(.nova(11))
                             .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: showLocationMenu ? .infinity : nil, alignment: showLocationMenu ? .leading : .center)

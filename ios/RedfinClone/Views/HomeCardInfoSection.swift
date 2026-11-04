@@ -15,7 +15,7 @@ struct HomeCardInfoSection: View {
             statsRow
 
             Text(listing.fullAddress)
-                .font(.inter(size.addressFontSize))
+                .font(.nova(size.addressFontSize))
                 .foregroundStyle(Theme.Colors.Card.address)
                 .lineLimit(1)
 
@@ -44,14 +44,14 @@ struct HomeCardInfoSection: View {
 
     private var dot: some View {
         Text("\u{00B7}")
-            .font(.inter(size.statsFontSize))
+            .font(.nova(size.statsFontSize))
             .foregroundStyle(Theme.Colors.Card.statsDot)
     }
 
     private func statPair(value: String, label: String) -> some View {
         (
-            Text(value).font(.inter(size.statsFontSize, .medium))
-            + Text(label).font(.inter(size.statsFontSize))
+            Text(value).font(.nova(size.statsFontSize, .medium))
+            + Text(label).font(.nova(size.statsFontSize))
         )
         .foregroundStyle(Theme.Colors.Card.stats)
     }

@@ -172,7 +172,7 @@ struct TourBookingFlowView: View {
 
             VStack(spacing: Theme.Spacing.xs) {
                 Text("Tour Requested")
-                    .font(.inter(22, .bold))
+                    .font(.nova(22, .demibold))
                 Text("\(dateLabel) at \(timeLabel)")
                     .font(Theme.Typography.secondary)
                     .foregroundStyle(.secondary)
@@ -205,14 +205,14 @@ struct TourBookingFlowView: View {
         } label: {
             VStack(spacing: 4) {
                 Text(date.formatted(.dateTime.weekday(.wide)))
-                    .font(.inter(11, .semibold))
+                    .font(.nova(11, .demibold))
                     .textCase(.uppercase)
                     .foregroundStyle(selected ? Theme.Colors.brandGreen : .secondary)
                 Text(date.formatted(.dateTime.day()))
                     .font(Theme.Typography.largeNumber)
                     .foregroundStyle(selected ? Theme.Colors.brandGreen : .primary)
                 Text(date.formatted(.dateTime.month(.abbreviated)))
-                    .font(.inter(11, .semibold))
+                    .font(.nova(11, .demibold))
                     .textCase(.uppercase)
                     .foregroundStyle(selected ? Theme.Colors.brandGreen : .secondary)
             }
@@ -234,7 +234,7 @@ struct TourBookingFlowView: View {
             selectedTimeIndex = index
         } label: {
             Text(slot.label)
-                .font(.inter(15, .semibold))
+                .font(.nova(15, .demibold))
                 .foregroundStyle(selected ? Theme.Colors.brandGreen : .primary)
                 .frame(width: 92, height: 52)
                 .background(Theme.Colors.background, in: RoundedRectangle(cornerRadius: Theme.Radius.medium))

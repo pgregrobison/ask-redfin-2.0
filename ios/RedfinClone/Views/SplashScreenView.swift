@@ -86,7 +86,7 @@ struct SplashScreenView: View {
 
             HStack(spacing: 2) {
                 Text(typedText)
-                    .font(.inter(fs))
+                    .font(.nova(fs))
                     .foregroundStyle(fg)
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)

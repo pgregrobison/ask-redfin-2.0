@@ -63,7 +63,7 @@ struct OTOSetupView: View {
                     dismiss()
                 } label: {
                     Text("Activate")
-                        .font(.inter(16, .bold))
+                        .font(.nova(16, .demibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 48)
@@ -106,7 +106,7 @@ struct OTOSetupFlowView: View {
                         dismiss()
                     } label: {
                         Text("Save draft")
-                            .font(.inter(16, .bold))
+                            .font(.nova(16, .demibold))
                             .foregroundStyle(.primary)
                             .frame(maxWidth: .infinity)
                             .frame(height: 48)
@@ -118,7 +118,7 @@ struct OTOSetupFlowView: View {
                         dismiss()
                     } label: {
                         Text("Activate listing")
-                            .font(.inter(16, .bold))
+                            .font(.nova(16, .demibold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 48)
@@ -191,11 +191,11 @@ struct OTOOffersSheetView: View {
                 .font(.system(size: 32))
                 .foregroundStyle(.secondary)
             VStack(alignment: .leading) {
-                Text(buyer).font(.inter(15, .semibold))
+                Text(buyer).font(.nova(15, .demibold))
                 Text("Submitted today").font(Theme.Typography.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            Text(price).font(.inter(16, .bold)).monospacedDigit()
+            Text(price).font(.nova(16, .demibold)).monospacedDigit()
         }
         .padding(.vertical, 4)
     }
@@ -224,7 +224,7 @@ struct MarketGaugePlaceholder: View {
             HStack {
                 Text("Buyer's").font(Theme.Typography.caption).foregroundStyle(.secondary)
                 Spacer()
-                Text("Balanced").font(.inter(12, .semibold)).foregroundStyle(.primary)
+                Text("Balanced").font(.nova(12, .demibold)).foregroundStyle(.primary)
                 Spacer()
                 Text("Seller's").font(Theme.Typography.caption).foregroundStyle(.secondary)
             }

@@ -13,7 +13,7 @@ private struct ConfirmationHeader: View {
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(Theme.Colors.brandGreen)
             Text(title)
-                .font(.inter(17, .bold))
+                .font(.nova(17, .demibold))
                 .foregroundStyle(Theme.Colors.brandGreen)
             Spacer()
         }
@@ -43,7 +43,7 @@ private struct ConfirmationCTAButton: View {
 
     var body: some View {
         Text(title)
-            .font(.inter(14, .bold))
+            .font(.nova(14, .demibold))
             .foregroundStyle(Theme.Colors.invertedPrimary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Theme.ButtonSize.compactVerticalPadding)
@@ -68,7 +68,7 @@ struct ScriptedTourConfirmationCard: View {
 
             (
                 Text("You're all set to see ")
-                + Text(listing?.address ?? "the home").bold()
+                + Text(listing?.address ?? "the home").font(.nova(16, .demibold))
                 + Text(" on \(confirmation.dateLabel) at \(confirmation.timeLabel). Your agent will meet you there.")
             )
             .font(Theme.Typography.secondary)
@@ -170,17 +170,17 @@ struct ScriptedMortgagePrequalCard: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Theme.Colors.brandGreen)
                     Text("Prequalified for")
-                        .font(.inter(14))
+                        .font(.nova(14))
                         .foregroundStyle(.primary)
                 }
 
                 HStack(alignment: .firstTextBaseline) {
                     Text(formatCurrency(prequalifiedAmount))
-                        .font(.inter(36, .bold))
+                        .font(.nova(36, .demibold))
                         .foregroundStyle(.primary)
                     Spacer()
                     Text(confirmation.expiresLabel)
-                        .font(.inter(12))
+                        .font(.nova(12))
                         .foregroundStyle(.secondary.opacity(0.65))
                 }
             }
@@ -195,7 +195,7 @@ struct ScriptedMortgagePrequalCard: View {
                 Image(systemName: "paperclip")
                     .font(.system(size: 18, weight: .bold))
                 Text("View letter")
-                    .font(.inter(16, .bold))
+                    .font(.nova(16, .demibold))
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
@@ -215,10 +215,10 @@ struct ScriptedMortgagePrequalCard: View {
     private func breakdownRow(label: String, value: String) -> some View {
         HStack {
             Text(label)
-                .font(.inter(14))
+                .font(.nova(14))
             Spacer()
             Text(value)
-                .font(.inter(14))
+                .font(.nova(14))
         }
         .foregroundStyle(.primary)
     }

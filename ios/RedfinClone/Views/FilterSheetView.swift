@@ -179,7 +179,7 @@ struct FilterSheetView: View {
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(suggestion.title)
-                                .font(.inter(15, .medium))
+                                .font(.nova(15, .medium))
                                 .foregroundStyle(.primary)
                                 .lineLimit(1)
                             if !suggestion.subtitle.isEmpty {
@@ -498,7 +498,7 @@ struct FilterSheetView: View {
                     }
                 } label: {
                     Text(labelForValue(value))
-                        .font(.inter(15, isSelected ? .semibold : .regular))
+                        .font(.nova(15, isSelected ? .demibold : .regular))
                         .foregroundStyle(isSelected ? Color(.systemBackground) : .primary)
                         .frame(maxWidth: .infinity)
                         .frame(height: tileHeight)
@@ -514,7 +514,7 @@ struct FilterSheetView: View {
 
     private func chipLabel(_ text: String, isSelected: Bool) -> some View {
         Text(text)
-            .font(.inter(15, isSelected ? .semibold : .regular))
+            .font(.nova(15, isSelected ? .demibold : .regular))
             .foregroundStyle(isSelected ? Color(.systemBackground) : .primary)
             .padding(.horizontal, Theme.Spacing.sm)
             .frame(maxWidth: .infinity)

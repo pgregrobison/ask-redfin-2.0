@@ -123,7 +123,7 @@ struct HomeCard: View {
 
     private func badgeView(_ badge: HomeCardBadge) -> some View {
         Text(badge.text)
-            .font(.inter(11, .bold))
+            .font(.nova(11, .demibold))
             .foregroundStyle(.white)
             .padding(.horizontal, Theme.Spacing.xs)
             .padding(.vertical, Theme.Spacing.xxs)

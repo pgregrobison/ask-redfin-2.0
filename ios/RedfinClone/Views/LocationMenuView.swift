@@ -76,7 +76,7 @@ struct LocationMenuView: View {
     private var locationSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             Text("Location")
-                .font(.subheadline)
+                .font(Nova.Typography.body14)
                 .foregroundStyle(.primary)
 
             HStack(spacing: Theme.Spacing.xs) {
@@ -110,7 +110,7 @@ struct LocationMenuView: View {
     private var priceSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             Text("Price")
-                .font(.subheadline)
+                .font(Nova.Typography.body14)
                 .foregroundStyle(.primary)
 
             HStack(spacing: Theme.Spacing.xs) {
@@ -122,7 +122,7 @@ struct LocationMenuView: View {
                 )
 
                 Text("–")
-                    .font(.subheadline)
+                    .font(Nova.Typography.body14)
                     .foregroundStyle(.tertiary)
 
                 priceDropdown(
@@ -183,7 +183,7 @@ struct LocationMenuView: View {
     private var bedsSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             Text("Beds")
-                .font(.subheadline)
+                .font(Nova.Typography.body14)
                 .foregroundStyle(.primary)
 
             optionTiles(
@@ -197,7 +197,7 @@ struct LocationMenuView: View {
     private var bathsSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             Text("Baths")
-                .font(.subheadline)
+                .font(Nova.Typography.body14)
                 .foregroundStyle(.primary)
 
             optionTiles(
@@ -218,7 +218,7 @@ struct LocationMenuView: View {
                     }
                 } label: {
                     Text(labelForValue(value))
-                        .font(.subheadline.weight(isSelected ? .semibold : .regular))
+                        .font(.nova(14, isSelected ? .medium : .regular))
                         .foregroundStyle(isSelected ? Color(.systemBackground) : .primary)
                         .frame(maxWidth: .infinity)
                         .frame(height: controlHeight + 4)
@@ -256,7 +256,7 @@ struct LocationMenuView: View {
             Image(systemName: systemImage)
                 .font(.system(size: Theme.IconSize.small, weight: .semibold))
             Text(title)
-                .font(.subheadline.weight(.semibold))
+                .font(Nova.Typography.label14)
         }
         .foregroundStyle(.primary)
         .frame(maxWidth: .infinity)
@@ -280,12 +280,12 @@ struct LocationMenuView: View {
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(suggestion.title)
-                                    .font(.subheadline.weight(.medium))
+                                    .font(Nova.Typography.label14)
                                     .foregroundStyle(.primary)
                                     .lineLimit(1)
                                 if !suggestion.subtitle.isEmpty {
                                     Text(suggestion.subtitle)
-                                        .font(.caption)
+                                        .font(Nova.Typography.caption12)
                                         .foregroundStyle(.secondary)
                                         .lineLimit(1)
                                 }

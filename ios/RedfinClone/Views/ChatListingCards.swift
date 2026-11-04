@@ -62,7 +62,7 @@ struct ChatListingCards: View {
                         Image(systemName: "map")
                             .font(.system(size: Theme.IconSize.medium, weight: .semibold))
                         Text("Show on map")
-                            .font(.inter(14, .bold))
+                            .font(.nova(14, .demibold))
                     }
                     .foregroundStyle(Theme.Colors.invertedPrimary)
                     .frame(maxWidth: .infinity)
@@ -141,7 +141,7 @@ private struct ChatDemoHomeCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .center) {
                     Text(listing.formattedFullPrice)
-                        .font(.inter(18, .bold))
+                        .font(.nova(18, .demibold))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                     Spacer(minLength: Theme.Spacing.md)
@@ -159,11 +159,11 @@ private struct ChatDemoHomeCard: View {
                     statPair(value: listing.bathsFormatted, unit: "ba")
                     statPair(value: listing.sqft.formatted(), unit: "sq ft")
                 }
-                .font(.inter(14))
+                .font(.nova(14))
                 .foregroundStyle(.primary)
 
                 Text(listing.fullAddress)
-                    .font(.inter(12))
+                    .font(.nova(12))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
             }

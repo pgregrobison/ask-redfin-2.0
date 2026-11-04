@@ -104,7 +104,7 @@ struct TourRouteMapWidget: View {
                             .frame(width: 28, height: 28)
                             .shadow(color: .black.opacity(0.25), radius: 3, y: 1)
                         Text("\(item.stop.id)")
-                            .font(.inter(11, .bold))
+                            .font(.nova(11, .demibold))
                             .foregroundStyle(.white)
                     }
                 }
@@ -130,13 +130,13 @@ struct TourRouteMapWidget: View {
                                 .fill(Theme.Colors.brandRed)
                                 .frame(width: 22, height: 22)
                             Text("\(item.stop.id)")
-                                .font(.inter(11, .bold))
+                                .font(.nova(11, .demibold))
                                 .foregroundStyle(.white)
                         }
 
                         VStack(alignment: .leading, spacing: 1) {
                             Text(item.listing.address)
-                                .font(.inter(15, .semibold))
+                                .font(.nova(15, .demibold))
                                 .foregroundStyle(.primary)
                             Text(item.listing.neighborhood ?? item.listing.city)
                                 .font(Theme.Typography.caption)
@@ -146,7 +146,7 @@ struct TourRouteMapWidget: View {
                         Spacer()
 
                         Text(item.stop.time)
-                            .font(.inter(12, .semibold))
+                            .font(.nova(12, .demibold))
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
 
@@ -250,7 +250,7 @@ private struct FullScreenRouteMap: View {
                                 .frame(width: 36, height: 36)
                                 .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
                             Text("\(item.stop.id)")
-                                .font(.inter(17, .bold))
+                                .font(.nova(17, .demibold))
                                 .foregroundStyle(.white)
                         }
                     }

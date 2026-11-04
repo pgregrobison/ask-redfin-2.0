@@ -17,11 +17,11 @@ struct TourDayStopCard: View {
                             .font(.caption2.bold())
                             .foregroundStyle(.primary)
                         Text("Stop \(stopNumber) of \(totalStops) • \(time)")
-                            .font(.inter(12, .semibold))
+                            .font(.nova(12, .demibold))
                             .foregroundStyle(.secondary)
                     }
                     Text(listing.address)
-                        .font(.inter(15, .semibold))
+                        .font(.nova(15, .demibold))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                     Text("\(listing.beds) bd • \(listing.bathsFormatted) ba • \(listing.formattedPrice)")
@@ -71,7 +71,7 @@ struct TourDayStopCard: View {
                         .fill(Color.primary)
                         .frame(width: 22, height: 22)
                     Text("\(stopNumber)")
-                        .font(.inter(11, .bold))
+                        .font(.nova(11, .demibold))
                         .foregroundStyle(Theme.Colors.invertedPrimary)
                 }
                 .padding(4)

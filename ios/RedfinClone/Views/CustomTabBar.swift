@@ -74,8 +74,7 @@ struct CustomTabBar: View {
                             .scaledToFit()
                             .frame(width: Theme.IconSize.tabBar, height: Theme.IconSize.tabBar)
                         Text(tab.title)
-                            .font(Theme.Typography.micro)
-                            .fontWeight(selectedTab == tab ? .semibold : .regular)
+                            .font(.novaFixed(11, selectedTab == tab ? .medium : .regular))
                     }
                     .foregroundStyle(selectedTab == tab ? Theme.Colors.brandRed : .secondary)
                     .frame(maxWidth: .infinity)

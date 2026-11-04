@@ -84,7 +84,7 @@ struct ListingCardOverlay: View {
 
     private func badgeView(_ badge: HomeCardBadge) -> some View {
         Text(badge.text)
-            .font(Theme.Typography.micro.bold())
+            .font(.nova(11, .demibold))
             .foregroundStyle(.white)
             .padding(.horizontal, Theme.Spacing.xs)
             .padding(.vertical, Theme.Spacing.xxs)

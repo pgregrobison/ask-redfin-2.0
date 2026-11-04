@@ -40,7 +40,7 @@ struct OptionListButton: View {
             action()
         } label: {
             Text(title)
-                .font(.inter(17, .medium))
+                .font(.nova(17, .medium))
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(Theme.Spacing.md)
@@ -62,7 +62,7 @@ struct FlowPrimaryButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.inter(16, .bold))
+                .font(.nova(16, .demibold))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: Theme.ButtonSize.minHeight + 4)

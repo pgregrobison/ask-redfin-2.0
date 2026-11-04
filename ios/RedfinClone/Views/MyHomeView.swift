@@ -75,7 +75,7 @@ struct MyHomeView: View {
                             Image(systemName: "arrow.counterclockwise")
                                 .font(.system(size: 13, weight: .semibold))
                             Text("Reset")
-                                .font(.inter(14, .semibold))
+                                .font(.nova(14, .demibold))
                         }
                         .foregroundStyle(.red)
                     }
@@ -113,7 +113,7 @@ struct MyHomeView: View {
             .clipShape(RoundedRectangle(cornerRadius: 6))
 
             Text("1223 Smith St")
-                .font(.inter(16))
+                .font(.nova(16))
                 .foregroundStyle(.primary)
         }
         .padding(.horizontal, 20)
@@ -261,10 +261,10 @@ struct MyHomeView: View {
             if debugSettings.otoIsActive {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Open to Offers")
-                        .font(.inter(23, .bold))
+                        .font(.nova(23, .demibold))
                         .foregroundStyle(.primary)
                     Text("34 buyers have reacted to your price.")
-                        .font(.inter(16))
+                        .font(.nova(16))
                         .foregroundStyle(.primary)
                 }
                 otoDashboardCard
@@ -272,7 +272,7 @@ struct MyHomeView: View {
                 openToOffersConservative
             } else {
                 Text("See what your home is worth to real buyers")
-                    .font(.inter(23, .bold))
+                    .font(.nova(23, .demibold))
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
                 openToOffersAggressive
@@ -295,7 +295,7 @@ struct MyHomeView: View {
                     .foregroundColor(.primary) +
                  Text("  (24 days left)")
                     .foregroundColor(.secondary))
-                    .font(.inter(14))
+                    .font(.nova(14))
                 Spacer()
             }
             .padding(.horizontal, 16)
@@ -312,10 +312,10 @@ struct MyHomeView: View {
 
             VStack(alignment: .leading, spacing: 5) {
                 Text("What buyers are saying")
-                    .font(.inter(12, .semibold))
+                    .font(.nova(12, .demibold))
                     .foregroundStyle(.secondary)
                 Text("Above comp prices (8), Needs updating (5), Great location (4), Move-in ready (3)")
-                    .font(.inter(14))
+                    .font(.nova(14))
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -333,7 +333,7 @@ struct MyHomeView: View {
             VStack(spacing: 10) {
                 Button(action: { showOTONextSteps = true }) {
                     Text("Take the next step")
-                        .font(.inter(16, .bold))
+                        .font(.nova(16, .demibold))
                         .foregroundStyle(Color(.systemBackground))
                         .frame(maxWidth: .infinity)
                         .frame(height: 48)
@@ -342,7 +342,7 @@ struct MyHomeView: View {
                 }
                 Button(action: { showOTOSetupFlow = true }) {
                     Text("Edit listing")
-                        .font(.inter(16, .bold))
+                        .font(.nova(16, .demibold))
                         .foregroundStyle(teal)
                         .frame(maxWidth: .infinity)
                         .frame(height: 48)
@@ -360,7 +360,7 @@ struct MyHomeView: View {
         HStack {
             HStack {
                 Text(label)
-                    .font(.inter(16, bold ? .bold : .regular))
+                    .font(.nova(16, bold ? .demibold : .regular))
                     .foregroundStyle(fg)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -370,7 +370,7 @@ struct MyHomeView: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
             Text(percent)
-                .font(.inter(16, bold ? .bold : .regular))
+                .font(.nova(16, bold ? .demibold : .regular))
                 .foregroundStyle(percentColor ?? fg)
                 .frame(width: 44, alignment: .trailing)
         }
@@ -382,10 +382,10 @@ struct MyHomeView: View {
     private func statTile(value: String, label: String, inset: Color) -> some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(.inter(18, .bold))
+                .font(.nova(18, .demibold))
                 .foregroundStyle(.primary)
             Text(label)
-                .font(.inter(14))
+                .font(.nova(14))
                 .foregroundStyle(.primary)
                 .multilineTextAlignment(.center)
         }
@@ -420,7 +420,7 @@ struct MyHomeView: View {
             VStack(spacing: 14) {
                 Button(action: { showOTOSetup = true }) {
                     Text("See who's interested")
-                        .font(.inter(16, .bold))
+                        .font(.nova(16, .demibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
@@ -462,7 +462,7 @@ struct MyHomeView: View {
                                     ThreeDotsLoading()
                                 } else {
                                     Text(setupDraft.hasActiveDraft ? "Continue drafting" : "Open my home to offers")
-                                        .font(.inter(16, .bold))
+                                        .font(.nova(16, .demibold))
                                         .foregroundStyle(Color.white)
                                 }
                             }
@@ -474,14 +474,14 @@ struct MyHomeView: View {
                         .buttonStyle(.plain)
                         .disabled(isOTOButtonLoading)
                         Text("No listing. No commitment. No sense of urgency.")
-                            .font(.inter(13))
+                            .font(.nova(13))
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: .infinity)
                     }
                     Button(action: {}) {
                         Text("How does this compare to selling?")
-                            .font(.inter(15, .semibold))
+                            .font(.nova(15, .demibold))
                             .foregroundStyle(Color(red: 21/255, green: 114/255, blue: 122/255))
                     }
                 }
@@ -507,10 +507,10 @@ struct MyHomeView: View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("A guide for your home")
-                    .font(.inter(23, .bold))
+                    .font(.nova(23, .demibold))
                     .foregroundStyle(.primary)
                 Text("What to do, what's worth it, and who can help.")
-                    .font(.inter(16))
+                    .font(.nova(16))
                     .foregroundStyle(.primary)
             }
 
@@ -525,14 +525,14 @@ struct MyHomeView: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 Text("Reimagine your space")
-                    .font(.inter(18, .bold))
+                    .font(.nova(18, .demibold))
                     .foregroundStyle(.primary)
 
                 ReimagineSpacePlaceholder()
 
                 Button(action: {}) {
                     Text("Get started")
-                        .font(.inter(14, .bold))
+                        .font(.nova(14, .demibold))
                         .foregroundStyle(.primary)
                         .frame(maxWidth: .infinity)
                         .frame(height: 40)
@@ -545,7 +545,7 @@ struct MyHomeView: View {
 
             VStack(alignment: .leading, spacing: 16) {
                 Text("Work with a local pro")
-                    .font(.inter(18, .bold))
+                    .font(.nova(18, .demibold))
                     .padding(.top, 12)
                     .foregroundStyle(.primary)
 
@@ -561,7 +561,7 @@ struct MyHomeView: View {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 14, weight: .semibold))
                     Text("Search projects")
-                        .font(.inter(14, .bold))
+                        .font(.nova(14, .demibold))
                 }
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity)
@@ -605,7 +605,7 @@ private struct HeroCard: View {
                 HStack(alignment: .top, spacing: 16) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(value)
-                            .font(.inter(36, .bold))
+                            .font(.nova(36, .demibold))
                             .foregroundStyle(Color.white)
                             .monospacedDigit()
 
@@ -614,7 +614,7 @@ private struct HeroCard: View {
                                 Image(systemName: "arrow.up")
                                     .font(.system(size: 11, weight: .bold))
                                 Text(trend)
-                                    .font(.inter(14))
+                                    .font(.nova(14))
                                     .monospacedDigit()
                             }
                             .foregroundStyle(Color.white)
@@ -643,12 +643,12 @@ private struct HeroCard: View {
                 VStack(alignment: .leading, spacing: 8) {
                     if let headline {
                         Text(headline)
-                            .font(.inter(16, .bold))
+                            .font(.nova(16, .demibold))
                             .foregroundStyle(Color.white)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     Text(bodyText)
-                        .font(.inter(14))
+                        .font(.nova(14))
                         .foregroundStyle(Color.white.opacity(0.9))
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -658,7 +658,7 @@ private struct HeroCard: View {
                         Image(systemName: buttonIcon)
                             .font(.system(size: 15, weight: .semibold))
                         Text(buttonLabel)
-                            .font(.inter(16, .bold))
+                            .font(.nova(16, .demibold))
                     }
                     .foregroundStyle(Color(red: 19/255, green: 19/255, blue: 19/255))
                     .padding(.horizontal, 32)
@@ -673,7 +673,7 @@ private struct HeroCard: View {
             .padding(.bottom, 20)
 
             Text(label)
-                .font(.inter(14, .bold))
+                .font(.nova(14, .demibold))
                 .foregroundStyle(Color.white)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 10)
@@ -702,7 +702,7 @@ private struct StatChip: View {
                 .font(Theme.Typography.caption)
                 .foregroundStyle(.primary)
             Text(value)
-                .font(.inter(16, .bold))
+                .font(.nova(16, .demibold))
                 .foregroundStyle(.primary)
                 .monospacedDigit()
             if let change {
@@ -753,7 +753,7 @@ private struct MarketPhotoCard: View {
             VStack(alignment: .leading) {
                 HStack {
                     Text(title)
-                        .font(.inter(14))
+                        .font(.nova(14))
                         .foregroundStyle(Color.white)
                         .lineLimit(1)
                     Spacer()
@@ -767,7 +767,7 @@ private struct MarketPhotoCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     if let badge = badgeLabel {
                         Text(badge)
-                            .font(.inter(9, .bold))
+                            .font(.nova(9, .demibold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -775,7 +775,7 @@ private struct MarketPhotoCard: View {
                             .clipShape(Capsule())
                     }
                     Text(primaryText)
-                        .font(.inter(23, .bold))
+                        .font(.nova(23, .demibold))
                         .foregroundStyle(Color.white)
                         .monospacedDigit()
                         .lineLimit(1)
@@ -802,7 +802,7 @@ private struct HomeGuideTipCard: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .top, spacing: 8) {
                 Text(title)
-                    .font(.inter(16, .bold))
+                    .font(.nova(16, .demibold))
                     .foregroundStyle(.primary)
                     .lineLimit(2)
                 Spacer()
@@ -814,13 +814,13 @@ private struct HomeGuideTipCard: View {
 
             HStack(spacing: 0) {
                 Text(cost)
-                    .font(.inter(14))
+                    .font(.nova(14))
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
                 Spacer()
                 Button(action: {}) {
                     Text("View tips")
-                        .font(.inter(14, .bold))
+                        .font(.nova(14, .demibold))
                         .foregroundStyle(Color(red: 21/255, green: 114/255, blue: 122/255))
                 }
             }
@@ -854,7 +854,7 @@ private struct HomeGuideProRow: View {
                     .font(Theme.Typography.caption)
                     .foregroundStyle(.primary)
                 Text(title)
-                    .font(.inter(16, .bold))
+                    .font(.nova(16, .demibold))
                     .foregroundStyle(.primary)
             }
 
@@ -886,7 +886,7 @@ private struct NeighborhoodStatCard: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text(label)
-                    .font(.inter(14, .semibold))
+                    .font(.nova(14, .demibold))
                     .foregroundStyle(.primary)
                 Spacer(minLength: 4)
                 Image(systemName: "chevron.right")
@@ -901,7 +901,7 @@ private struct NeighborhoodStatCard: View {
                 .minimumScaleFactor(0.6)
                 .padding(.top, 18)
             Text(secondary)
-                .font(.inter(13))
+                .font(.nova(13))
                 .foregroundStyle(secondaryColor)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
@@ -958,7 +958,7 @@ private struct NeighborhoodDevelopmentsCard: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Theme.Colors.brandRed)
                     Text("How does this affect my home value?")
-                        .font(.inter(15, .semibold))
+                        .font(.nova(15, .demibold))
                         .foregroundStyle(.primary)
                     Spacer(minLength: 0)
                 }
@@ -993,12 +993,12 @@ private struct DevelopmentRow: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
-                    .font(.inter(16, .bold))
+                    .font(.nova(16, .demibold))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
 
                 Text(statusLabel)
-                    .font(.inter(12, .semibold))
+                    .font(.nova(12, .demibold))
                     .foregroundStyle(.primary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
@@ -1006,7 +1006,7 @@ private struct DevelopmentRow: View {
                     .clipShape(Capsule())
 
                 Text(description)
-                    .font(.inter(13))
+                    .font(.nova(13))
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
 
@@ -1015,7 +1015,7 @@ private struct DevelopmentRow: View {
                         Image(systemName: "chart.line.uptrend.xyaxis")
                             .font(.system(size: 11, weight: .semibold))
                         Text(valueImpact)
-                            .font(.inter(13, .semibold))
+                            .font(.nova(13, .demibold))
                     }
                     .foregroundStyle(Theme.Colors.brandGreen)
                 }
@@ -1049,7 +1049,7 @@ private struct EstTimeToSellCard: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("Est. time to sell")
-                    .font(.inter(14, .semibold))
+                    .font(.nova(14, .demibold))
                     .foregroundStyle(.primary)
                 Spacer(minLength: 4)
                 Image(systemName: "chevron.right")
@@ -1061,7 +1061,7 @@ private struct EstTimeToSellCard: View {
 
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text("27 days")
-                    .font(.inter(30, .bold))
+                    .font(.nova(30, .demibold))
                     .foregroundStyle(.primary)
                     .monospacedDigit()
                 Image(systemName: "arrow.up")
@@ -1070,7 +1070,7 @@ private struct EstTimeToSellCard: View {
             }
 
             Text("Faster than last month")
-                .font(.inter(13))
+                .font(.nova(13))
                 .foregroundStyle(.secondary)
                 .padding(.top, 8)
                 .lineLimit(2)
@@ -1135,7 +1135,7 @@ private struct OpenToOffersMapPreview: View {
         VStack(spacing: 4) {
             if pin.isUserHome {
                 Text("Est. \(pin.price)")
-                    .font(.inter(11, .bold))
+                    .font(.nova(11, .demibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -1163,7 +1163,7 @@ private struct OpenToOffersMapPreview: View {
                                 .foregroundStyle(.white)
                         )
                     Text(pin.price)
-                        .font(.inter(11, .bold))
+                        .font(.nova(11, .demibold))
                         .foregroundStyle(Color(red: 34/255, green: 34/255, blue: 34/255))
                 }
                 .padding(.leading, 5)
