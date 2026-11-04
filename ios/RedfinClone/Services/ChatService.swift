@@ -61,7 +61,7 @@ class ChatService {
     }
 
     nonisolated func searchListings(filters: SearchFilters) -> [Listing] {
-        var results = MockData.listings
+        var results = HomeCatalog.shared.listings
 
         if let minBeds = filters.minBeds { results = results.filter { $0.beds >= minBeds } }
         if let maxBeds = filters.maxBeds { results = results.filter { $0.beds <= maxBeds } }
@@ -74,12 +74,9 @@ class ChatService {
         if let propertyType = filters.propertyType { results = results.filter { $0.propertyType.lowercased() == propertyType.lowercased() } }
         if let isHotHome = filters.isHotHome, isHotHome { results = results.filter { $0.isHotHome } }
         if let neighborhoods = filters.neighborhoods, !neighborhoods.isEmpty {
-            let keys = neighborhoods.map { $0.lowercased() }
-            results = results.filter { listing in
-                let nbhd = listing.neighborhood?.lowercased() ?? ""
-                let city = listing.city.lowercased()
-                return keys.contains(where: { k in nbhd == k || city == k || nbhd.contains(k) || city.contains(k) })
-            }
+            // Same area polygons the map uses, so chat counts match the pins.
+            let regions = SearchRegions.shared
+            results = regions.pool(results, locations: neighborhoods.map { regions.canonicalName($0) })
         }
 
         return results
@@ -190,7 +187,7 @@ class ChatService {
     }
 
     private func extractAddress(from input: String) -> String? {
-        for listing in MockData.listings {
+        for listing in HomeCatalog.shared.listings {
             if input.contains(listing.address.lowercased()) || input.contains(listing.city.lowercased()) {
                 return listing.address
             }
@@ -199,7 +196,7 @@ class ChatService {
     }
 
     private func extractListingId(from input: String) -> String? {
-        for listing in MockData.listings {
+        for listing in HomeCatalog.shared.listings {
             if input.contains(listing.address.lowercased()) || input.contains(listing.city.lowercased()) {
                 return listing.id
             }

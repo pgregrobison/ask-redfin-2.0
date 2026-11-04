@@ -34,7 +34,7 @@ struct ForYouView: View {
                 }
 
                 if !viewModel.luxuryHomes.isEmpty {
-                    sectionHeader(title: "Luxury Homes", subtitle: "$2M and up")
+                    sectionHeader(title: "Luxury Homes", subtitle: "$1.45M and up")
                     carousel(listings: viewModel.luxuryHomes, cardWidth: 280)
                 }
 

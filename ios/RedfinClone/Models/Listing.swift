@@ -26,6 +26,8 @@ nonisolated struct Listing: Identifiable, Hashable, Codable, Sendable {
     let buyerAgentFee: String
     var isListedByRedfin: Bool = false
     var isCompassComingSoon: Bool = false
+    /// Prototype-derived details for catalog homes (`HomeCatalog`); nil for fixtures.
+    var facts: HomeFacts? = nil
 
     init(
         id: String,
@@ -51,7 +53,8 @@ nonisolated struct Listing: Identifiable, Hashable, Codable, Sendable {
         hoaDues: String,
         buyerAgentFee: String,
         isListedByRedfin: Bool = false,
-        isCompassComingSoon: Bool = false
+        isCompassComingSoon: Bool = false,
+        facts: HomeFacts? = nil
     ) {
         self.id = id
         self.price = price
@@ -77,6 +80,7 @@ nonisolated struct Listing: Identifiable, Hashable, Codable, Sendable {
         self.buyerAgentFee = buyerAgentFee
         self.isListedByRedfin = isListedByRedfin
         self.isCompassComingSoon = isCompassComingSoon
+        self.facts = facts
     }
 
     var coordinate: CLLocationCoordinate2D {
@@ -89,11 +93,9 @@ nonisolated struct Listing: Identifiable, Hashable, Codable, Sendable {
 
     var formattedPrice: String {
         if price >= 1_000_000 {
-            let millions = Double(price) / 1_000_000.0
-            if millions == Double(Int(millions)) {
-                return "$\(Int(millions))M"
-            }
-            return "$\(String(format: "%.2g", millions))M"
+            // Two decimals with trailing zeros dropped, like the prototype ($1.25M, $1.3M, $1M).
+            let hundredths = (Double(price) / 10_000).rounded() / 100
+            return "$\(hundredths.formatted(.number.precision(.fractionLength(0...2)).grouping(.never)))M"
         } else {
             let thousands = price / 1000
             return "$\(thousands)K"

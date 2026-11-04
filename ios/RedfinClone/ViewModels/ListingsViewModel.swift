@@ -22,7 +22,22 @@ nonisolated enum SortOption: String, CaseIterable, Sendable {
 @MainActor
 class ListingsViewModel {
     var debugSettings: DebugSettings?
-    var listings: [Listing] = DemoFixtures.isEnabled ? MockData.listings + [DemoFixtures.bookshelfListing] : MockData.listings
+    var listings: [Listing] = DemoFixtures.isEnabled
+        ? HomeCatalog.shared.listings + [DemoFixtures.bookshelfListing]
+        : HomeCatalog.shared.listings
+
+    /// The prototype's search: area, filters, criteria, refinements, sort.
+    /// Saved as the current session whenever it changes.
+    var search = SearchState.initial {
+        didSet { if search != oldValue { queueMemorySave() } }
+    }
+    /// Snapshots taken before each undoable change, newest last.
+    private(set) var undoStack: [SearchState.Snapshot] = []
+    let memoryStore = SearchMemoryStore()
+    /// Conversation log saved alongside the search (filled by the chat in Phase 3).
+    var askLog: [AskLogEntry] = []
+    private var memorySaveTask: Task<Void, Never>?
+
     var savedListingIDs: Set<String> = []
     var seenListingIDs: Set<String> = []
     var selectedListing: Listing?
@@ -42,13 +57,40 @@ class ListingsViewModel {
     /// or how deep the map sits inside its own safe-area/nav-bar context.
     var topChromeMinY: CGFloat = 0
 
-    var filterMinPrice: Int? = nil
-    var filterMaxPrice: Int? = nil
-    var filterMinBeds: Int = 0
-    var filterMinBaths: Int = 0
-    var filterPropertyType: String? = nil
-    var filterNeighborhoods: [String] = []
-    var filterIsHotHome: Bool = false
+    // Legacy filter API used by the current filter sheet, location menu and
+    // chat; each one reads and writes `search`.
+    var filterMinPrice: Int? {
+        get { search.filters.minPrice > 0 ? search.filters.minPrice : nil }
+        set { search.filters.minPrice = newValue ?? 0 }
+    }
+    var filterMaxPrice: Int? {
+        get { search.filters.maxPrice > 0 ? search.filters.maxPrice : nil }
+        set { search.filters.maxPrice = newValue ?? 0 }
+    }
+    var filterMinBeds: Int {
+        get { search.filters.beds }
+        set { search.filters.beds = newValue }
+    }
+    var filterMinBaths: Int {
+        get { Int(search.filters.baths) }
+        set { search.filters.baths = Double(newValue) }
+    }
+    var filterPropertyType: String? {
+        get { search.filters.types.first }
+        set { search.filters.types = newValue.map { [$0] } ?? [] }
+    }
+    /// Search areas other than the default "Seattle, WA".
+    var filterNeighborhoods: [String] {
+        get { search.locations.filter { $0 != SearchRegions.defaultLocation } }
+        set {
+            let names = newValue.map { SearchRegions.shared.canonicalName($0) }
+            search.locations = names.isEmpty ? [SearchRegions.defaultLocation] : names
+        }
+    }
+    var filterIsHotHome: Bool {
+        get { search.filters.hotOnly }
+        set { search.filters.hotOnly = newValue }
+    }
     private var geocodeTask: Task<Void, Never>?
     private let geocoder = CLGeocoder()
     let locationService = LocationService()
@@ -62,50 +104,102 @@ class ListingsViewModel {
         span: MKCoordinateSpan(latitudeDelta: 0.12, longitudeDelta: 0.12)
     ))
 
+    /// Results ranked by the search's sort, with criteria matches ("4/5").
+    var rankedResults: [RankedHome] {
+        SearchEngine.results(listings, search)
+    }
+
+    /// Homes on the map: the search area filtered by filters, must-haves,
+    /// dealbreakers and refinements.
     var filteredListings: [Listing] {
-        var result = listings
-        if let minPrice = filterMinPrice {
-            result = result.filter { $0.price >= minPrice }
-        }
-        if let maxPrice = filterMaxPrice {
-            result = result.filter { $0.price <= maxPrice }
-        }
-        if filterMinBeds > 0 {
-            result = result.filter { $0.beds >= filterMinBeds }
-        }
-        if filterMinBaths > 0 {
-            result = result.filter { Int($0.baths) >= filterMinBaths }
-        }
-        if let propertyType = filterPropertyType {
-            result = result.filter { $0.propertyType.lowercased() == propertyType.lowercased() }
-        }
-        if !filterNeighborhoods.isEmpty {
-            let lower = filterNeighborhoods.map { $0.lowercased() }
-            result = result.filter { listing in
-                let nbhd = listing.neighborhood?.lowercased() ?? ""
-                let city = listing.city.lowercased()
-                return lower.contains(where: { key in nbhd == key || city == key || nbhd.contains(key) || city.contains(key) })
-            }
-        }
-        if filterIsHotHome {
-            result = result.filter { $0.isHotHome }
-        }
-        return result
+        SearchEngine.visible(listings, search)
+    }
+
+    /// Criteria matches for one home under the current search.
+    func ranking(for listing: Listing) -> RankedHome {
+        let crits = search.scoringCriteria
+        let ok = crits.filter { HomeCatalog.has(listing, $0) }
+        return RankedHome(listing: listing, matched: ok, missed: crits.filter { !ok.contains($0) })
     }
 
     var hasActiveFilters: Bool {
-        filterMinPrice != nil || filterMaxPrice != nil || filterMinBeds > 0 || filterMinBaths > 0
-            || filterPropertyType != nil || !filterNeighborhoods.isEmpty || filterIsHotHome
+        !search.filters.isEmpty || !filterNeighborhoods.isEmpty || !search.criteria.isEmpty
     }
 
     func clearAllFilters() {
-        filterMinPrice = nil
-        filterMaxPrice = nil
-        filterMinBeds = 0
-        filterMinBaths = 0
-        filterPropertyType = nil
-        filterNeighborhoods = []
-        filterIsHotHome = false
+        search.filters = HomeFilters()
+        search.locations = [SearchRegions.defaultLocation]
+    }
+
+    // MARK: - Undo
+
+    /// Applies a change to the search, saving the prior state for undo.
+    /// Returns that snapshot so a chat reply can offer "Undo change".
+    @discardableResult
+    func changeSearch(_ change: (inout SearchState) -> Void) -> SearchState.Snapshot {
+        let before = search.snapshot
+        var next = search
+        change(&next)
+        if next.snapshot != before { undoStack.append(before) }
+        search = next
+        return before
+    }
+
+    func undo(to snapshot: SearchState.Snapshot) {
+        search.restore(snapshot)
+        if let i = undoStack.lastIndex(of: snapshot) { undoStack.removeSubrange(i...) }
+    }
+
+    func undoLast() {
+        guard let last = undoStack.popLast() else { return }
+        search.restore(last)
+    }
+
+    // MARK: - Memory and threads
+
+    var currentMemory: SearchMemory {
+        SearchMemory(search: search, favorites: Array(savedListingIDs).sorted(), log: askLog, timestamp: .now)
+    }
+
+    var threads: [SearchThread] { memoryStore.loadThreads() }
+
+    /// Restores a saved session's search, saved homes and log.
+    func restore(_ memory: SearchMemory) {
+        undoStack = []
+        search = memory.search
+        savedListingIDs = Set(memory.favorites)
+        persistSavedListings()
+        askLog = memory.log
+    }
+
+    /// Archives the current chat and opens a past one.
+    func openThread(_ thread: SearchThread) {
+        memoryStore.archive(currentMemory)
+        memoryStore.removeThread(id: thread.id)
+        restore(thread.memory)
+    }
+
+    /// "Start fresh": clears the search; `full` also forgets saved homes,
+    /// tours and the saved session.
+    func startFresh(full: Bool) {
+        undoStack = []
+        if full {
+            search = SearchState()
+            savedListingIDs = []
+            persistSavedListings()
+            memoryStore.clearCurrent()
+        } else {
+            search.clearSearch()
+        }
+    }
+
+    private func queueMemorySave() {
+        memorySaveTask?.cancel()
+        memorySaveTask = Task {
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled else { return }
+            memoryStore.saveCurrent(currentMemory)
+        }
     }
 
     func applyChatFilters(_ filters: SearchFilters, addNeighborhoods: Bool) {
@@ -178,21 +272,18 @@ class ListingsViewModel {
     }
 
     var sortedListings: [Listing] {
-        let base = filteredListings
         switch sortOption {
         case .recommended:
-            return base.sorted { a, b in
-                if a.isHotHome != b.isHotHome { return a.isHotHome }
-                return a.daysOnMarket < b.daysOnMarket
-            }
+            // Best match: most criteria matched first.
+            return rankedResults.map(\.listing)
         case .priceLowToHigh:
-            return base.sorted { $0.price < $1.price }
+            return filteredListings.sorted { $0.price < $1.price }
         case .priceHighToLow:
-            return base.sorted { $0.price > $1.price }
+            return filteredListings.sorted { $0.price > $1.price }
         case .newest:
-            return base.sorted { $0.daysOnMarket < $1.daysOnMarket }
+            return filteredListings.sorted { $0.daysOnMarket < $1.daysOnMarket }
         case .sqft:
-            return base.sorted { $0.sqft > $1.sqft }
+            return filteredListings.sorted { $0.sqft > $1.sqft }
         }
     }
 
@@ -205,8 +296,11 @@ class ListingsViewModel {
     }
 
     var luxuryHomes: [Listing] {
-        listings.filter { $0.price >= 2_000_000 }.sorted { $0.price > $1.price }
+        listings.filter { $0.price >= Self.luxuryThreshold }.sorted { $0.price > $1.price }.prefix(12).map { $0 }
     }
+
+    /// The catalog tops out at $1.5M, so "luxury" starts at $1.45M.
+    static let luxuryThreshold = 1_450_000
 
     var bestValueHomes: [Listing] {
         listings.filter { $0.sqft > 0 }.sorted { $0.pricePerSqFt < $1.pricePerSqFt }.prefix(8).map { $0 }
@@ -231,6 +325,12 @@ class ListingsViewModel {
 
     init() {
         loadSavedListings()
+        // Keep last session aside for "Pick up where I left off" (as the
+        // prototype does), and re-seed the demo chats.
+        if let previous = memoryStore.loadCurrent() {
+            memoryStore.archive(previous)
+        }
+        memoryStore.seedDemoThreads(listings: HomeCatalog.shared.listings)
     }
 
     func toggleSaved(_ listing: Listing) {
