@@ -24,7 +24,7 @@ class ListingsViewModel {
         didSet {
             guard search != oldValue else { return }
             refreshResults()
-            queueMemorySave()
+            saveMemorySoon()
             if search.locations != oldValue.locations { fitLocations(search.locations) }
         }
     }
@@ -234,7 +234,7 @@ class ListingsViewModel {
         }
     }
 
-    private func queueMemorySave() {
+    func saveMemorySoon() {
         memorySaveTask?.cancel()
         memorySaveTask = Task {
             try? await Task.sleep(for: .milliseconds(500))
