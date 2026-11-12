@@ -55,7 +55,7 @@ struct FindPillBar: View {
                         }
                     }
                 }
-                if let a = s.analysis, let def = HomeAnalyses.all[a.key] {
+                if let a = s.analysis, let def = HomeAnalyses.lookup(a.key) {
                     analysisPill(def, isOn: a.isOn)
                 }
                 }

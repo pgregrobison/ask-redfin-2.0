@@ -15,6 +15,8 @@ struct AskEntry: Identifiable, Equatable {
     var feedback: Feedback? = nil
     /// Characters revealed so far while streaming; nil once fully shown.
     var revealed: Int? = nil
+    var cta: AskCTA? = nil
+    var widget: AskWidget? = nil
 
     /// Criteria and memory confirmations link to the dream home.
     var linksDreamHome: Bool {
@@ -36,8 +38,10 @@ enum AskBarToast: Equatable {
 @MainActor
 final class AskSession {
     let listings: ListingsViewModel
-    private let responder = AskResponder()
+    /// The intent router; remembers what the conversation points at.
+    let router: AskRouter
 
+    static let opensChatForAttachments = false
     static let greeting = "Hi! Tell me what you want in a home, in your own words."
     static let introQuery = "Homes in Seattle under $1.3M with natural light, a finished basement, a large yard, a home office and a quiet street"
     static let disclaimer = "This chat is powered by AI and may process your input to help improve our service. We do not sell your data. AI is occasionally inaccurate. Verify important information."
@@ -88,6 +92,7 @@ final class AskSession {
 
     init(listings: ListingsViewModel) {
         self.listings = listings
+        router = AskRouter(listings: listings.listings, favorites: { [weak listings] in listings?.savedListingIDs ?? [] })
         placeholders = ["Add to or analyze your search", "Color pins by distance to parks",
                         "Homes on \(Self.mostCommonStreet(listings.listings) ?? "Phinney Ave N")",
                         "Which has the best transit score?", "Which has the biggest basement?"]
@@ -121,12 +126,14 @@ final class AskSession {
         entries.append(AskEntry(kind: .user, text: text, photo: photo))
         syncLog()
 
-        var reply = responder.reply(to: text, search: listings.search, listings: listings.listings)
-        if photo != nil && reply.change == nil {
-            reply.bot = "Got your photo. Matching homes to a photo’s style arrives with the next update; for now, tell me what you like about it."
-            reply.surface = true
+        let reply: AskReply
+        if let photo {
+            let size = (try? FileManager.default.attributesOfItem(atPath: photo.path)[.size] as? Int) ?? 0
+            reply = router.photoMatch(seed: photo.lastPathComponent + "\(size)", listings.search)
+        } else {
+            reply = router.route(text, listings.search)
         }
-        run(reply)
+        run(reply, barSteps: AskSteps.bar(for: text, reply: reply, filters: listings.search.filters))
     }
 
     func retry() {
@@ -134,17 +141,22 @@ final class AskSession {
         send(last.text, photo: last.photo)
     }
 
-    private func run(_ reply: AskReply) {
+    /// Runs a reply through the working state, then lands it. Widget taps
+    /// and other UI actions use this too, so they read like a chat turn.
+    func run(_ reply: AskReply, barSteps: [String]? = nil) {
         isBusy = true
-        steps = reply.steps.isEmpty ? ["Thinking"] : reply.steps
+        // Closed chat: the bar walks through its steps. Open: dots, then the
+        // step list for slow requests.
+        steps = isChatOpen ? (reply.steps.isEmpty ? ["Thinking"] : reply.steps) : (barSteps ?? (reply.steps.isEmpty ? ["Thinking"] : reply.steps))
         stepIndex = 0
         showsStepper = false
         toastTask?.cancel()
         barToast = .thinking(steps[0])
 
         let reduce = UIAccessibility.isReduceMotionEnabled
-        let total: Double = reply.slow ? (reduce ? 3.6 : .random(in: 6...10)) : (reduce ? 1.5 : .random(in: 2.0...2.6))
-        let every: Double = reply.slow ? 1.1 : 0.7
+        let every: Double = reply.slow ? Nova.AskMotion.workingStepEvery : 0.7
+        var total: Double = reply.slow ? (reduce ? 3.6 : .random(in: 6...10)) : (reduce ? 1.5 : .random(in: 2.0...2.6))
+        if !isChatOpen { total = max(total, Nova.AskMotion.dotsDelay + Double(steps.count) * every + 0.2) }
 
         Task {
             let start = Date.now
@@ -166,14 +178,30 @@ final class AskSession {
     private func land(_ reply: AskReply) async {
         var reply = reply
         switch reply.action {
-        case .recall: reply = recallReply()
-        case .freshStart: reply = freshStartReply()
+        case .recall:
+            if let t = listings.threads.first(where: { $0.id != threadID }) {
+                isBusy = false
+                showsStepper = false
+                barToast = nil
+                open(t, announce: true)
+                return
+            }
+            reply = AskReply(bot: "I don’t have an earlier chat to pick up yet. Tell me what you want in a home, in your own words.")
+            reply.surface = true
+        case .freshStart(let full):
+            if full {
+                listings.savedListingIDs = []
+                listings.memoryStore.clearCurrent()
+            }
         case nil: break
         }
 
         var undo: SearchState.Snapshot?
-        if let change = reply.change {
-            withAnimation(Nova.Motion.easeOut()) { undo = listings.changeSearch(change) }
+        if let next = reply.next, next != listings.search {
+            var snap: SearchState.Snapshot?
+            withAnimation(Nova.Motion.easeOut()) { snap = listings.changeSearch { $0 = next } }
+            // Undo is offered on turns that confirmed a change.
+            if !reply.tools.isEmpty { undo = snap }
         }
         for t in reply.tools { entries.append(AskEntry(kind: .tool, text: t)) }
         if let w = reply.workDone { entries.append(AskEntry(kind: .work, text: w)) }
@@ -181,14 +209,25 @@ final class AskSession {
         showsStepper = false
 
         let tool = reply.tools.first
+        guard !reply.bot.isEmpty else {
+            if let tool, !isChatOpen { showToast(.done(tool)) } else { barToast = nil }
+            suggestions = reply.suggestions.isEmpty ? freshSuggestions() : Array(reply.suggestions.prefix(3))
+            syncLog()
+            return
+        }
+        // A reply with a button or widget opens the chat so you can use it
+        // (on once Phases 5–6 draw widgets and CTAs).
+        if Self.opensChatForAttachments && !isChatOpen && (reply.cta != nil || reply.widget != nil) {
+            barToast = nil
+            isChatOpen = true
+        }
         if isChatOpen {
             barToast = nil
             if tool != nil { try? await Task.sleep(for: .milliseconds(1100)) }
-            await streamIntoLog(reply.bot, undo: undo)
+            await streamIntoLog(reply.bot, undo: undo, cta: reply.cta, widget: reply.widget)
         } else {
             if let tool { showToast(.done(tool)) } else { barToast = nil }
-            let id = appendBot(reply.bot, undo: undo, streaming: false)
-            _ = id
+            appendBot(reply.bot, undo: undo, streaming: false)
             if tool == nil || reply.surface {
                 try? await Task.sleep(for: .milliseconds(tool == nil ? 250 : 1100))
                 await streamIntoBubble(reply.bot)
@@ -201,14 +240,14 @@ final class AskSession {
     // MARK: - Streaming
 
     @discardableResult
-    private func appendBot(_ text: String, undo: SearchState.Snapshot?, streaming: Bool) -> UUID {
-        let e = AskEntry(kind: .bot, text: text, undo: undo, revealed: streaming ? 0 : nil)
+    private func appendBot(_ text: String, undo: SearchState.Snapshot?, streaming: Bool, cta: AskCTA? = nil, widget: AskWidget? = nil) -> UUID {
+        let e = AskEntry(kind: .bot, text: text, undo: undo, revealed: streaming ? 0 : nil, cta: cta, widget: widget)
         entries.append(e)
         return e.id
     }
 
-    private func streamIntoLog(_ text: String, undo: SearchState.Snapshot?) async {
-        let id = appendBot(text, undo: undo, streaming: !UIAccessibility.isReduceMotionEnabled)
+    private func streamIntoLog(_ text: String, undo: SearchState.Snapshot?, cta: AskCTA? = nil, widget: AskWidget? = nil) async {
+        let id = appendBot(text, undo: undo, streaming: !UIAccessibility.isReduceMotionEnabled, cta: cta, widget: widget)
         guard !UIAccessibility.isReduceMotionEnabled else { return }
         isStreaming = true
         let chars = Array(text)
@@ -327,7 +366,7 @@ final class AskSession {
         dismissFeedback()
         withAnimation(Nova.Motion.easeOut()) { listings.undo(to: snap) }
         entries.append(AskEntry(kind: .tool, text: "Undid the last change"))
-        entries.append(AskEntry(kind: .bot, text: "Back to \(AskResponder.homes(listings.rankedResults.count)). Tell me what you meant and I’ll try again."))
+        entries.append(AskEntry(kind: .bot, text: "Back to \(AskText.homes(listings.rankedResults.count)). Tell me what you meant and I’ll try again."))
         syncLog()
     }
 
@@ -384,6 +423,7 @@ final class AskSession {
         archiveCurrent()
         threadID = "t\(Int(Date.now.timeIntervalSince1970 * 1000))"
         threadTitle = nil
+        router.reset()
         entries = [AskEntry(kind: .bot, text: Self.greeting)]
         suggestions = ["Natural light", "Under $900K", "Within a 20 min drive of South Lake Union"]
         syncLog()
@@ -396,6 +436,7 @@ final class AskSession {
         withAnimation(Nova.Motion.easeOut()) { listings.restore(thread.memory) }
         threadID = thread.id
         threadTitle = thread.title
+        router.reset()
         entries = [AskEntry(kind: .bot, text: Self.greeting)] + thread.memory.log.map { e in
             AskEntry(kind: e.from == .user ? .user : e.from == .tool ? .tool : .bot, text: e.text)
         }
@@ -403,7 +444,7 @@ final class AskSession {
         if announce {
             entries.append(AskEntry(kind: .tool, text: "Restored your search from \(when)"))
             let s = listings.search
-            entries.append(AskEntry(kind: .bot, text: "Welcome back. I kept everything from \(when): \(AskResponder.homes(listings.rankedResults.count)) in \(AskResponder.join(s.locations))\(s.pricePhrase)."))
+            entries.append(AskEntry(kind: .bot, text: "Welcome back. I kept everything from \(when): \(AskText.homes(listings.rankedResults.count)) in \(AskText.joinAnd(s.locations))\(s.pricePhrase)."))
         } else {
             entries.append(AskEntry(kind: .tool, text: "Opened your chat from \(when)"))
         }
@@ -414,22 +455,6 @@ final class AskSession {
     private func archiveCurrent() {
         listings.memoryStore.archive(SearchMemory(search: listings.search, favorites: Array(listings.savedListingIDs).sorted(),
                                                   log: listings.askLog, timestamp: .now, title: threadTitle), id: threadID)
-    }
-
-    private func recallReply() -> AskReply {
-        if let t = listings.threads.first(where: { $0.id != threadID }) {
-            Task { open(t, announce: true) }
-            return AskReply(bot: "")
-        }
-        return AskReply(bot: "I don’t have an earlier chat to pick up yet. Tell me what you want in a home, in your own words.", surface: true)
-    }
-
-    private func freshStartReply() -> AskReply {
-        var r = AskReply(bot: "Started a new search. I cleared your area, filters and criteria, and kept your saved homes and tours. Tell me what you want in a home, in your own words.")
-        r.tools = ["Cleared your search"]
-        r.change = { $0.clearSearch() }
-        r.suggestions = ["Natural light", "Under $900K", "Within a 20 min drive of South Lake Union"]
-        return r
     }
 
     // MARK: - Helpers
@@ -448,7 +473,7 @@ final class AskSession {
     }
 
     static func area(_ locations: [String]) -> String {
-        AskResponder.join(locations.map { $0.replacingOccurrences(of: ", WA", with: "") })
+        AskText.joinAnd(locations.map { $0.replacingOccurrences(of: ", WA", with: "") })
     }
 
     static func clip(_ s: String) -> String { s.count > 60 ? String(s.prefix(59)) + "…" : s }

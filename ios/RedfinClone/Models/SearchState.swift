@@ -87,7 +87,7 @@ nonisolated struct SearchState: Codable, Hashable, Sendable {
     var exposed = ["price"]
     var savedSearch = false
     var tours: [ScheduledTour] = []
-    var watches: [String] = []
+    var watches: [HomeWatch] = []
     var hidden: Set<String> = []
     /// Homes the chat is pointing at (red pins).
     var highlighted: [String] = []
@@ -284,7 +284,7 @@ nonisolated enum SearchEngine {
         switch s.sort {
         case .analysis:
             // Lowest value first (closest, cheapest per sq ft, best transit); no value last.
-            if let a = s.analysis.flatMap({ HomeAnalyses.all[$0.key] }) {
+            if let a = s.analysis.flatMap({ HomeAnalyses.lookup($0.key) }) {
                 let v = Dictionary(uniqueKeysWithValues: ranked.map { ($0.id, a.value($0.listing)) })
                 return ranked.sorted { x, y in
                     switch (v[x.id] ?? nil, v[y.id] ?? nil) {

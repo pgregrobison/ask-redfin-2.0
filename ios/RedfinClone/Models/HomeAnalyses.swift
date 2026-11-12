@@ -89,6 +89,58 @@ nonisolated enum HomeAnalyses {
         return out
     }()
 
+    /// Patterns that name each landmark in a request ("slu", "the zoo").
+    static let landmarkPatterns = [#"green ?lake"#, #"\bzoo\b|woodland park"#, #"gas ?works"#, #"\btroll\b"#,
+                                   #"\b(uw|u ?dub|university of washington)\b"#, #"\blocks\b"#, #"south lake union|\bslu\b|amazon"#,
+                                   #"space needle|seattle center"#, #"golden gardens"#]
+
+    /// Travel-time targets (the prototype's `TT`): landmarks, then parks not already covered.
+    static let travelTargets: [(place: Place, pattern: String)] = {
+        var out = zip(landmarks, landmarkPatterns).map { (place: $0.0, pattern: $0.1) }
+        for p in parks where !landmarkPatterns.contains(where: { p.name.lowercased().rx($0) }) {
+            let core = p.name.lowercased().replacingOccurrences(of: " park", with: "")
+            out.append((p, #"\b"# + NSRegularExpression.escapedPattern(for: core) + #"\b"#))
+        }
+        return out
+    }()
+
+    enum TravelMode: String, Sendable, CaseIterable {
+        case drive, transit, walk, bike
+        var noun: String { rawValue }
+        /// Detour factor, average mph and fixed minutes (parking, waiting).
+        var params: (f: Double, mph: Double, base: Double, note: String) {
+            switch self {
+            case .drive: (1.4, 24, 3, " without traffic")
+            case .transit: (1.35, 11, 8, ", including the wait")
+            case .walk: (1.25, 3, 0, "")
+            case .bike: (1.3, 10, 1, "")
+            }
+        }
+    }
+
+    /// Minutes from a home to a target by mode (the prototype's `ttMin`).
+    static func travelMinutes(_ l: Listing, _ target: Place, _ mode: TravelMode) -> Int {
+        let m = mode.params
+        let miles = TravelTime.miles(l.latitude, l.longitude, target.lat, target.lng)
+        return max(1, Int((miles * m.f / m.mph * 60 + m.base).rounded()))
+    }
+
+    /// Built-in analyses plus travel-time ones keyed "tt:<target>:<mode>".
+    static func lookup(_ key: String) -> HomeAnalysis? {
+        if let a = all[key] { return a }
+        let parts = key.split(separator: ":")
+        guard parts.count == 3, parts[0] == "tt", let i = Int(parts[1]), travelTargets.indices.contains(i),
+              let mode = TravelMode(rawValue: String(parts[2])) else { return nil }
+        let t = travelTargets[i].place
+        let name = t.name.replacingOccurrences(of: "^the ", with: "", options: .regularExpression)
+        let noun = mode.noun.capitalizedFirst
+        return HomeAnalysis(key: key, title: "\(noun) time to \(t.name)", pill: "\(noun) time to \(name)",
+                            sortTitle: "Shortest \(mode.noun) to \(name)", lowCaption: "Shorter", highCaption: "Longer",
+                            value: { Double(travelMinutes($0, t, mode)) },
+                            label: { "\(travelMinutes($0, t, mode)) min \(mode.noun) to \(name)" },
+                            format: { "\(Int($0.rounded())) min" })
+    }
+
     // MARK: Color ramp
 
     private static let ramp: [(Double, Double, Double)] = [(42, 57, 111), (158, 63, 113), (253, 188, 150)]

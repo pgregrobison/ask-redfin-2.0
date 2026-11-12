@@ -130,7 +130,7 @@ class ListingsViewModel {
 
     var activeAnalysis: HomeAnalysis? {
         guard let a = search.analysis, a.isOn else { return nil }
-        return HomeAnalyses.all[a.key]
+        return HomeAnalyses.lookup(a.key)
     }
 
     private func refreshResults() {
