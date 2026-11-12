@@ -40,7 +40,7 @@ struct OptionListButton: View {
             action()
         } label: {
             Text(title)
-                .font(.body.weight(.medium))
+                .font(.nova(17, .medium))
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(Theme.Spacing.md)
@@ -62,7 +62,7 @@ struct FlowPrimaryButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 16, weight: .bold))
+                .font(.nova(16, .demibold))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: Theme.ButtonSize.minHeight + 4)
@@ -86,10 +86,10 @@ struct FlowStepScaffold<Content: View>: View {
                 VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                     VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                         Text(title)
-                            .font(.title2.bold())
+                            .font(Theme.Typography.sectionTitle)
                         if let subtitle {
                             Text(subtitle)
-                                .font(.subheadline)
+                                .font(Theme.Typography.secondary)
                                 .foregroundStyle(.secondary)
                         }
                     }

@@ -10,12 +10,13 @@ struct HomeCardInfoSection: View {
         VStack(alignment: .leading, spacing: size.fixedWidth != nil ? Theme.Spacing.xxs + 2 : Theme.Spacing.xs) {
             Text(listing.formattedFullPrice)
                 .font(size.priceFont)
+                .foregroundStyle(Theme.Colors.Card.price)
 
             statsRow
 
             Text(listing.fullAddress)
-                .font(size.addressFont)
-                .foregroundStyle(.secondary)
+                .font(.nova(size.addressFontSize))
+                .foregroundStyle(Theme.Colors.Card.address)
                 .lineLimit(1)
 
             if !listing.tags.isEmpty {
@@ -33,14 +34,26 @@ struct HomeCardInfoSection: View {
 
     private var statsRow: some View {
         HStack(spacing: size.fixedWidth != nil ? Theme.Spacing.xxs + 2 : Theme.Spacing.xs) {
-            Text("\(listing.beds) bd")
-            Text("·")
-            Text("\(listing.bathsFormatted) ba")
-            Text("·")
-            Text("\(listing.sqft.formatted()) sq ft")
+            statPair(value: "\(listing.beds)", label: " bd")
+            dot
+            statPair(value: listing.bathsFormatted, label: " ba")
+            dot
+            statPair(value: listing.sqft.formatted(), label: " sq ft")
         }
-        .font(size.statsFont)
-        .foregroundStyle(.secondary)
+    }
+
+    private var dot: some View {
+        Text("\u{00B7}")
+            .font(.nova(size.statsFontSize))
+            .foregroundStyle(Theme.Colors.Card.statsDot)
+    }
+
+    private func statPair(value: String, label: String) -> some View {
+        (
+            Text(value).font(.nova(size.statsFontSize, .medium))
+            + Text(label).font(.nova(size.statsFontSize))
+        )
+        .foregroundStyle(Theme.Colors.Card.stats)
     }
 
     private var tagsRow: some View {

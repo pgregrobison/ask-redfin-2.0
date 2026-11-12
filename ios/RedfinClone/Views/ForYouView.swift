@@ -14,7 +14,7 @@ struct ForYouView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 if !viewModel.hotHomes.isEmpty {
-                    sectionHeader(title: "Hot Homes", subtitle: "Selling fast in NYC")
+                    sectionHeader(title: "Hot Homes", subtitle: "Selling fast in Seattle")
                     carousel(listings: viewModel.hotHomes, cardWidth: 280)
                 }
 
@@ -34,7 +34,7 @@ struct ForYouView: View {
                 }
 
                 if !viewModel.luxuryHomes.isEmpty {
-                    sectionHeader(title: "Luxury Homes", subtitle: "$2M and up")
+                    sectionHeader(title: "Luxury Homes", subtitle: "$1.45M and up")
                     carousel(listings: viewModel.luxuryHomes, cardWidth: 280)
                 }
 
@@ -110,10 +110,10 @@ struct ForYouView: View {
                     .font(Theme.Typography.headline)
             }
 
-            Text("NYC Housing Market Trends")
+            Text("Seattle Housing Market Trends")
                 .font(Theme.Typography.cardTitle)
 
-            Text("The NYC metro housing market remains competitive with a median home price of $1.2M, up 4.2% year-over-year. Inventory is tight with homes spending an average of 21 days on market. Manhattan condos and Brooklyn brownstones continue to see the strongest buyer demand, while Queens offers the best value per square foot.")
+            Text("The Seattle metro housing market remains competitive with a median home price of $850K, up 4.2% year-over-year. Inventory is tight with homes spending an average of 14 days on market. Capitol Hill and Queen Anne continue to see the strongest buyer demand, while Bellevue and Kirkland offer more room to spread out across the lake.")
                 .font(Theme.Typography.secondary)
                 .foregroundStyle(.secondary)
                 .lineSpacing(3)

@@ -12,7 +12,7 @@ struct FilledInputView: View {
                     .font(Theme.Typography.caption)
                     .foregroundStyle(.secondary)
                 Text(value)
-                    .font(.subheadline.weight(.medium))
+                    .font(.nova(15, .medium))
                     .foregroundStyle(.primary)
             }
 

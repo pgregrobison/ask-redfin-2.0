@@ -54,7 +54,7 @@ struct OTOSetupView: View {
                     .font(.system(size: 56))
                     .foregroundStyle(.tint)
                 Text("Open to Offers Setup")
-                    .font(.title2.bold())
+                    .font(Theme.Typography.sectionTitle)
                 Text("This is a placeholder for the setup flow.")
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -63,7 +63,7 @@ struct OTOSetupView: View {
                     dismiss()
                 } label: {
                     Text("Activate")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.nova(16, .demibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 48)
@@ -96,7 +96,7 @@ struct OTOSetupFlowView: View {
                     .font(.system(size: 56))
                     .foregroundStyle(.tint)
                 Text("Setup flow")
-                    .font(.title2.bold())
+                    .font(Theme.Typography.sectionTitle)
                 Text("Multi-step flow placeholder. Save a draft or activate.")
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -106,7 +106,7 @@ struct OTOSetupFlowView: View {
                         dismiss()
                     } label: {
                         Text("Save draft")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.nova(16, .demibold))
                             .foregroundStyle(.primary)
                             .frame(maxWidth: .infinity)
                             .frame(height: 48)
@@ -118,7 +118,7 @@ struct OTOSetupFlowView: View {
                         dismiss()
                     } label: {
                         Text("Activate listing")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.nova(16, .demibold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 48)
@@ -191,11 +191,11 @@ struct OTOOffersSheetView: View {
                 .font(.system(size: 32))
                 .foregroundStyle(.secondary)
             VStack(alignment: .leading) {
-                Text(buyer).font(.system(size: 15, weight: .semibold))
-                Text("Submitted today").font(.caption).foregroundStyle(.secondary)
+                Text(buyer).font(.nova(15, .demibold))
+                Text("Submitted today").font(Theme.Typography.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            Text(price).font(.system(size: 16, weight: .bold)).monospacedDigit()
+            Text(price).font(.nova(16, .demibold)).monospacedDigit()
         }
         .padding(.vertical, 4)
     }
@@ -222,11 +222,11 @@ struct MarketGaugePlaceholder: View {
             .frame(maxWidth: .infinity)
 
             HStack {
-                Text("Buyer's").font(.caption).foregroundStyle(.secondary)
+                Text("Buyer's").font(Theme.Typography.caption).foregroundStyle(.secondary)
                 Spacer()
-                Text("Balanced").font(.caption.weight(.semibold)).foregroundStyle(.primary)
+                Text("Balanced").font(.nova(12, .demibold)).foregroundStyle(.primary)
                 Spacer()
-                Text("Seller's").font(.caption).foregroundStyle(.secondary)
+                Text("Seller's").font(Theme.Typography.caption).foregroundStyle(.secondary)
             }
             .padding(.horizontal, 4)
         }

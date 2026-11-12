@@ -140,7 +140,7 @@ struct HybridDetailView: View {
             ToolbarItem(placement: .principal) {
                 if let index = focusedPhotoIndex {
                     Text("\(index + 1) of \(listing.photos.count)")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.nova(15, .demibold))
                         .foregroundStyle(.white)
                 }
             }
@@ -447,7 +447,7 @@ struct HybridDetailView: View {
                 Text("·")
                 Text("\(listing.sqft.formatted()) sq ft")
             }
-            .font(.system(size: 18, weight: .semibold))
+            .font(.nova(18, .demibold))
             .foregroundStyle(.primary)
 
             Text(listing.fullAddress)
@@ -462,7 +462,7 @@ struct HybridDetailView: View {
         HStack {
             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                 Text("$\(totalMonthly.formatted())/mo")
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.nova(20, .demibold))
                     .foregroundStyle(.primary)
                 HStack(spacing: Theme.Spacing.xxs) {
                     Text("Rates dropped")

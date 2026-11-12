@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var viewModel = ListingsViewModel()
-    @State private var chatViewModel = ChatViewModel()
+    @State private var viewModel: ListingsViewModel
+    @State private var session: AskSession
     @State private var debugSettings = DebugSettings()
     @State private var myHomeDraft = OTOSetupDraft()
     @State private var askRedfinContext = AskRedfinContextModel()
@@ -13,28 +13,45 @@ struct ContentView: View {
     @State private var savedPath = NavigationPath()
     @State private var myHomePath = NavigationPath()
     @State private var myRedfinPath = NavigationPath()
-    @State private var showTabBar: Bool = true
-    @State private var stickyMinimized: Bool = false
-    @State private var pendingMapListings: [Listing]?
-    @State private var pendingNeighborhoodFocus: [String]?
-    @State private var showLocationMenu: Bool = false
-    @State private var chatDetent: PresentationDetent = .large
     @State private var showDebugPanel: Bool = false
     @State private var showSplash: Bool = false
     @State private var splashChromeOpacity: Double = 1
     @State private var accessoryBarMidY: CGFloat = 0
-    @Environment(\.scenePhase) private var scenePhase
     @Namespace private var zoomNamespace
 
+    init() {
+        let listings = ListingsViewModel()
+        _viewModel = State(initialValue: listings)
+        _session = State(initialValue: AskSession(listings: listings))
+    }
+
     var body: some View {
-        rootLayout
+        tabs
             .environment(\.askRedfinContext, askRedfinContext)
             .overlay(alignment: .top) {
                 if selectedTab == .find && navigationPath.isEmpty {
-                    FindPillOverlay(viewModel: viewModel, showLocationMenu: $showLocationMenu)
-                        .opacity(splashChromeOpacity)
+                    Group {
+                        if debugSettings.findChromeStyle == .searchBar {
+                            FindTopBar(viewModel: viewModel, onAskTap: { session.openChat() })
+                        } else {
+                            FindPillBar(viewModel: viewModel)
+                        }
+                    }
+                    .opacity(splashChromeOpacity)
+                    .onGeometryChange(for: CGFloat.self) { proxy in
+                        proxy.frame(in: .global).maxY
+                    } action: { maxY in
+                        viewModel.topChromeMaxY = maxY
+                    }
                 }
             }
+            .overlay {
+                if session.isComposing {
+                    AskComposer(session: session)
+                        .transition(.opacity)
+                }
+            }
+            .animation(Nova.Motion.easeOut(), value: session.isComposing)
             .fullScreenCover(isPresented: $showSplash) {
                 SplashScreenView(accessoryMidY: $accessoryBarMidY) {
                     withAnimation(.easeInOut(duration: 0.5)) {
@@ -43,170 +60,108 @@ struct ContentView: View {
                 }
                 .ignoresSafeArea()
             }
-        .tint(.primary)
-        .onAppear {
-            if !UserDefaults.standard.bool(forKey: "hasSeenIntro") {
-                UserDefaults.standard.set(true, forKey: "hasSeenIntro")
-                selectedTab = .find
-                splashChromeOpacity = 0
-                showSplash = true
-            }
-
-            viewModel.debugSettings = debugSettings
-            chatViewModel.debugSettings = debugSettings
-            chatViewModel.currentFindFiltersProvider = { [weak viewModel] in
-                viewModel?.currentSearchFilters ?? SearchFilters()
-            }
-            chatViewModel.requestTourDayNotificationHandler = {
-                presentFakeTourDayBanner()
-            }
-        }
-        .sheet(isPresented: $showDebugPanel) {
-            DebugPanelView(settings: debugSettings, onPlaySplash: {
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(350))
+            .tint(.primary)
+            .onAppear {
+                if !UserDefaults.standard.bool(forKey: "hasSeenIntro") {
+                    UserDefaults.standard.set(true, forKey: "hasSeenIntro")
                     selectedTab = .find
                     splashChromeOpacity = 0
                     showSplash = true
                 }
-            })
-            .presentationDetents([.medium, .large])
-        }
-        .sheet(isPresented: $viewModel.showChat, onDismiss: {
-            let nbhds = pendingNeighborhoodFocus
-            pendingNeighborhoodFocus = nil
-            if let listings = pendingMapListings {
-                pendingMapListings = nil
-                if let nbhds, !nbhds.isEmpty {
-                    viewModel.fitNeighborhoods(nbhds)
-                } else {
-                    viewModel.fitListings(listings)
-                }
+                viewModel.debugSettings = debugSettings
+                session.onOpenMyHome = { selectedTab = .myHome }
             }
-            chatDetent = .large
-        }) {
-            AskRedfinView(
-                chatViewModel: chatViewModel,
-                allListings: viewModel.listings,
-                savedListingIDs: viewModel.savedListingIDs,
-                onToggleSave: { listing in viewModel.toggleSaved(listing) },
-                onDismiss: {
-                    viewModel.showChat = false
-                },
-                onShowOnMap: { listings, _ in
-                    pendingMapListings = listings
-                    selectedTab = .find
-                    viewModel.showListView = false
-                    viewModel.dismissOverlay()
-                    viewModel.showChat = false
-                },
-                onListingTap: { listing in
-                    viewModel.showChat = false
-                    viewModel.markSeen(listing)
-                    navigationPath.append(listing)
-                },
-                mapFocusActive: isMapFocusEligible,
-                selectedDetent: $chatDetent,
-                zoomNamespace: zoomNamespace
-            )
-        }
-        .onChange(of: chatViewModel.searchResultsJustArrived) { _, results in
-            guard let results, !results.isEmpty else { return }
-
-            if isMapFocusEligible {
-                chatViewModel.searchResultsJustArrived = nil
-                chatViewModel.searchFiltersJustArrived = nil
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
-                    chatDetent = .fraction(0.7)
-                }
+            .sheet(isPresented: $showDebugPanel) {
+                DebugPanelView(
+                    settings: debugSettings,
+                    onPlaySplash: {
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .milliseconds(350))
+                            selectedTab = .find
+                            splashChromeOpacity = 0
+                            showSplash = true
+                        }
+                    },
+                    // The scripted demo thread is retired with the Vision chat.
+                    onRestartScriptedFlow: {}
+                )
+                .presentationDetents([.medium, .large])
+            }
+            .sheet(isPresented: $viewModel.showChat) {
+                AskChatSheet(session: session, onHomeLink: highlightHome)
+            }
+            .onChange(of: selectedTab) { _, _ in updateAskContextForTab() }
+            .onChange(of: navigationPath.count) { _, _ in updateAskContextForTab() }
+            .onChange(of: viewModel.notificationService.pendingCompassListingID) { _, newID in
+                guard let listingID = newID else { return }
+                viewModel.notificationService.pendingCompassListingID = nil
+                viewModel.showChat = false
+                navigationPath = NavigationPath()
+                selectedTab = .find
+                viewModel.showListView = false
                 Task {
-                    try? await Task.sleep(for: .milliseconds(350))
-                    viewModel.fitListings(results, sheetFraction: 0.7)
-                }
-                return
-            }
-        }
-        .onChange(of: selectedTab) { _, _ in
-            updateAskContextForTab()
-        }
-        .onChange(of: navigationPath.count) { _, _ in
-            updateAskContextForTab()
-        }
-        .onChange(of: viewModel.notificationService.pendingCompassListingID) { _, newID in
-            guard let listingID = newID else { return }
-            viewModel.notificationService.pendingCompassListingID = nil
-            viewModel.showChat = false
-            navigationPath = NavigationPath()
-            selectedTab = .find
-            viewModel.showListView = false
-            Task {
-                try? await Task.sleep(for: .milliseconds(300))
-                if let listing = viewModel.listings.first(where: { $0.id == listingID }) {
-                    viewModel.selectedListing = listing
-                    viewModel.markSeen(listing)
-                    viewModel.fitUserAndListing(listing)
-                } else {
-                    viewModel.selectNearestCompassListing(to: nil)
+                    try? await Task.sleep(for: .milliseconds(300))
+                    if let listing = viewModel.listings.first(where: { $0.id == listingID }) {
+                        viewModel.selectedListing = listing
+                        viewModel.markSeen(listing)
+                        viewModel.fitUserAndListing(listing)
+                    } else {
+                        viewModel.selectNearestCompassListing(to: nil)
+                    }
                 }
             }
-        }
     }
+
+    // MARK: - Tabs
+
+    /// The Ask bar lives in the iOS 26 tab bar accessory; before that (or with
+    /// the "App nav" debug entrypoint) it sits above the native tab bar.
+    private var usesAccessory: Bool {
+        if #available(iOS 26.0, *) { return debugSettings.globalEntrypoint == .accessory }
+        return false
+    }
+
+    private var showsAskBar: Bool { debugSettings.findChromeStyle == .classic }
 
     @ViewBuilder
-    private var rootLayout: some View {
-        if useAccessoryLayout, #available(iOS 26.0, *) {
-            accessoryLayout
+    private var tabs: some View {
+        if #available(iOS 26.0, *), usesAccessory {
+            tabView
+                .tabBarMinimizeBehavior(.onScrollDown)
+                .tabViewBottomAccessory {
+                    if showsAskBar {
+                        AccessoryAskBar(session: session)
+                            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).midY } action: { if $0 > 0 { accessoryBarMidY = $0 } }
+                    }
+                }
         } else {
-            appNavLayout
+            tabView
         }
     }
 
-    private var useAccessoryLayout: Bool {
-        debugSettings.globalEntrypoint == .accessory
-    }
-
-    private var appNavLayout: some View {
-        NavigationStack(path: $navigationPath) {
-            ZStack(alignment: .bottom) {
-                tabContent
-
-                if showTabBar {
-                    CustomTabBar(
-                        selectedTab: $selectedTab,
-                        onFABTap: {
-                            viewModel.showChat = true
-                        }
-                    )
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-            }
-            .ignoresSafeArea(.keyboard)
-            .onChange(of: viewModel.isCardVisible) { _, visible in
-                withAnimation(.easeInOut(duration: 0.25)) {
-                    showTabBar = !visible
-                }
-            }
-            .navigationDestination(for: Listing.self) { listing in
-                listingDetail(for: listing)
-            }
-        }
-    }
-
-    @available(iOS 26.0, *)
-    private var accessoryLayout: some View {
-        TabView(selection: tabSelectionBinding) {
+    private var tabView: some View {
+        TabView(selection: $selectedTab) {
             Tab(value: AppTab.find) {
                 NavigationStack(path: $navigationPath) {
                     FindView(viewModel: viewModel, zoomNamespace: zoomNamespace, isActive: selectedTab == .find, onProfileTap: {}, onListingTap: { listing in
                         navigateToListing(listing)
-                    }, showShimmer: mapShimmerActive, accessoryMode: true, hideProfileButton: true)
-                    .navigationDestination(for: Listing.self) { listing in
-                        listingDetail(for: listing)
+                    }, accessoryMode: usesAccessory, hideProfileButton: true, hideListToggle: true)
+                    .overlay(alignment: .bottom) {
+                        AskReplyBubble(session: session)
+                            .animation(Nova.Motion.easeOut(), value: session.bubbleText)
                     }
+                    .safeAreaInset(edge: .bottom) {
+                        if !usesAccessory && showsAskBar {
+                            AskBar(session: session, standalone: true)
+                                .padding(.horizontal, 12)
+                                .padding(.bottom, 8)
+                        }
+                    }
+                    .navigationDestination(for: Listing.self) { listing in listingDetail(for: listing) }
                 }
                 .tint(.primary)
             } label: {
-                Label(AppTab.find.title, systemImage: AppTab.find.selectedIcon)
+                Label(AppTab.find.title, image: AppTab.find.assetName)
             }
             Tab(value: AppTab.forYou) {
                 NavigationStack(path: $forYouPath) {
@@ -214,13 +169,11 @@ struct ContentView: View {
                         viewModel.markSeen(listing)
                         forYouPath.append(listing)
                     }, hideProfileButton: true, ownsNavStack: true)
-                    .navigationDestination(for: Listing.self) { listing in
-                        listingDetail(for: listing)
-                    }
+                    .navigationDestination(for: Listing.self) { listing in listingDetail(for: listing) }
                 }
                 .tint(.primary)
             } label: {
-                Label(AppTab.forYou.title, systemImage: AppTab.forYou.selectedIcon)
+                Label(AppTab.forYou.title, image: AppTab.forYou.assetName)
             }
             Tab(value: AppTab.saved) {
                 NavigationStack(path: $savedPath) {
@@ -228,13 +181,11 @@ struct ContentView: View {
                         viewModel.markSeen(listing)
                         savedPath.append(listing)
                     }, hideProfileButton: true, ownsNavStack: true)
-                    .navigationDestination(for: Listing.self) { listing in
-                        listingDetail(for: listing)
-                    }
+                    .navigationDestination(for: Listing.self) { listing in listingDetail(for: listing) }
                 }
                 .tint(.primary)
             } label: {
-                Label(AppTab.saved.title, systemImage: AppTab.saved.selectedIcon)
+                Label(AppTab.saved.title, image: AppTab.saved.assetName)
             }
             Tab(value: AppTab.myHome) {
                 NavigationStack(path: $myHomePath) {
@@ -242,7 +193,7 @@ struct ContentView: View {
                 }
                 .tint(.primary)
             } label: {
-                Label(AppTab.myHome.title, systemImage: AppTab.myHome.selectedIcon)
+                Label(AppTab.myHome.title, image: AppTab.myHome.assetName)
             }
             Tab(value: AppTab.myRedfin) {
                 NavigationStack(path: $myRedfinPath) {
@@ -250,111 +201,43 @@ struct ContentView: View {
                 }
                 .tint(.primary)
             } label: {
-                Label(AppTab.myRedfin.title, systemImage: AppTab.myRedfin.selectedIcon)
+                Label(AppTab.myRedfin.title, image: AppTab.myRedfin.assetName)
             }
         }
-        .tabBarMinimizeBehavior(.onScrollDown)
         .tint(Theme.Colors.brandRed)
-        .tabViewBottomAccessory {
-            AskRedfinAccessoryBar {
-                chatViewModel.focusInputOnAppear = true
-                viewModel.showChat = true
-            }
-            .onGeometryChange(for: CGFloat.self) { proxy in
-                proxy.frame(in: .global).midY
-            } action: { midY in
-                if midY > 0 { accessoryBarMidY = midY }
-            }
-        }
         .ignoresSafeArea(.keyboard)
-        .onChange(of: viewModel.isCardVisible) { _, visible in
-            if visible { stickyMinimized = true }
-        }
-        .onChange(of: viewModel.showListView) { _, showing in
-            if showing { stickyMinimized = false }
-        }
-        .onChange(of: navigationPath.count) { _, count in
-            if count == 0 { stickyMinimized = false }
-        }
     }
 
-    @ViewBuilder
-    private var tabContent: some View {
-        ZStack {
-            FindView(viewModel: viewModel, zoomNamespace: zoomNamespace, isActive: selectedTab == .find, onProfileTap: { showDebugPanel = true }, onListingTap: { listing in
-                navigateToListing(listing)
-            }, showShimmer: mapShimmerActive)
-            .animation(.easeInOut(duration: 0.25), value: mapShimmerActive)
-            .opacity(selectedTab == .find ? 1 : 0)
-            .allowsHitTesting(selectedTab == .find)
-
-            ForYouView(viewModel: viewModel, zoomNamespace: zoomNamespace, isActive: selectedTab == .forYou, onProfileTap: { showDebugPanel = true }) { listing in
-                navigateToListing(listing)
-            }
-            .opacity(selectedTab == .forYou ? 1 : 0)
-            .allowsHitTesting(selectedTab == .forYou)
-
-            SavedView(viewModel: viewModel, zoomNamespace: zoomNamespace, isActive: selectedTab == .saved, onProfileTap: { showDebugPanel = true }) { listing in
-                navigateToListing(listing)
-            }
-            .opacity(selectedTab == .saved ? 1 : 0)
-            .allowsHitTesting(selectedTab == .saved)
-
-            MyHomeView(isActive: selectedTab == .myHome, onProfileTap: { showDebugPanel = true }, debugSettings: debugSettings, setupDraft: myHomeDraft)
-                .opacity(selectedTab == .myHome ? 1 : 0)
-                .allowsHitTesting(selectedTab == .myHome)
-        }
-    }
+    // MARK: - Detail
 
     @ViewBuilder
     private func listingDetail(for listing: Listing) -> some View {
-        let detail = detailView(for: listing)
-            .toolbar(.hidden, for: .tabBar)
-            .onAppear { withAnimation(.easeOut(duration: 0.2)) { showTabBar = false } }
-            .onDisappear { if !viewModel.isCardVisible { withAnimation(.easeOut(duration: 0.2)) { showTabBar = true } } }
-
-        detail.navigationTransition(.zoom(sourceID: listing.id, in: zoomNamespace))
-    }
-
-    @ViewBuilder
-    private func detailView(for listing: Listing) -> some View {
-        let hideFAB = debugSettings.globalEntrypoint == .accessory
         HybridDetailView(
             listing: listing,
             isSaved: viewModel.isSaved(listing),
             useZoomTransition: true,
-            hideAskRedfinFAB: hideFAB,
+            hideAskRedfinFAB: usesAccessory,
             onToggleSave: { viewModel.toggleSaved(listing) },
-            onAskRedfin: { viewModel.showChat = true }
+            onAskRedfin: { session.openChat() }
         )
+        .toolbar(.hidden, for: .tabBar)
+        .navigationTransition(.zoom(sourceID: listing.id, in: zoomNamespace))
     }
 
-    private var mapShimmerActive: Bool {
-        false
-    }
+    // MARK: - Helpers
 
-    private var isMapFocusEligible: Bool {
-        debugSettings.searchBehavior == .mapFocus
-            && selectedTab == .find
-            && !viewModel.showListView
-    }
-
-    private var shouldMinimizeAccessory: Bool {
-        guard selectedTab == .find,
-              !viewModel.showListView,
-              navigationPath.isEmpty else { return false }
-        return stickyMinimized
-    }
-
-    @available(iOS 26.0, *)
-    private var tabSelectionBinding: Binding<AppTab> {
-        Binding(
-            get: { selectedTab },
-            set: { newValue in
-                stickyMinimized = false
-                selectedTab = newValue
-            }
-        )
+    /// Tapping an address in a reply: close the chat and point at the home.
+    private func highlightHome(_ id: String) {
+        guard let listing = viewModel.listings.first(where: { $0.id == id }) else { return }
+        viewModel.showChat = false
+        navigationPath = NavigationPath()
+        selectedTab = .find
+        viewModel.showListView = false
+        viewModel.search.highlighted = [id]
+        Task {
+            try? await Task.sleep(for: .milliseconds(400))
+            viewModel.selectListing(listing)
+        }
     }
 
     private func updateAskContextForTab() {
@@ -380,26 +263,16 @@ struct ContentView: View {
         viewModel.markSeen(listing)
         navigationPath.append(listing)
     }
+}
 
-    private func presentFakeTourDayBanner() {
-        // Slight delay so the user sees the banner appear after sending the message.
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(600))
-            TourDayBannerWindow.shared.present(onTap: { handleFakeTourDayTap() })
-        }
-    }
+/// The Ask bar inside the iOS 26 tab bar accessory; compact when the tab
+/// bar minimizes inline.
+@available(iOS 26.0, *)
+private struct AccessoryAskBar: View {
+    @Bindable var session: AskSession
+    @Environment(\.tabViewBottomAccessoryPlacement) private var placement
 
-    private func handleFakeTourDayTap() {
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(150))
-            navigationPath = NavigationPath()
-            selectedTab = .find
-            viewModel.showListView = false
-            if !viewModel.showChat {
-                viewModel.showChat = true
-            }
-            try? await Task.sleep(for: .milliseconds(400))
-            chatViewModel.startTourDay()
-        }
+    var body: some View {
+        AskBar(session: session, compact: placement == .inline)
     }
 }

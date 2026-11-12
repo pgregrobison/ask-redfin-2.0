@@ -47,6 +47,13 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIAppFonts</key>
+	<array>
+		<string>WNTLText-Rg.ttf</string>
+		<string>WNTLText-Md.ttf</string>
+		<string>WNTLText-Db.ttf</string>
+		<string>WNTLText-Bd.ttf</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

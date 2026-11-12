@@ -31,6 +31,26 @@ nonisolated struct MortgageRequest: Codable, Sendable {
     let listingId: String?
 }
 
+/// Scripted "morph" result for the Request-showing button — used only by the
+/// Launch Demo autoplay sequence, in place of the real multi-step tour flow.
+nonisolated struct ScriptedTourConfirmation: Codable, Sendable, Hashable {
+    let listingId: String
+    let dateLabel: String
+    let timeLabel: String
+    let agentName: String
+    let agentPhotoURL: String
+}
+
+/// Scripted "morph" result for the Estimate-my-rate button — used only by the
+/// Launch Demo autoplay sequence, in place of the real multi-step mortgage flow.
+nonisolated struct ScriptedMortgageConfirmation: Codable, Sendable, Hashable {
+    let income: Int
+    let downPayment: Int
+    let loanType: String
+    let rateAPR: String
+    let expiresLabel: String
+}
+
 nonisolated struct SearchFilters: Codable, Sendable {
     var minBeds: Int?
     var maxBeds: Int?
@@ -55,6 +75,8 @@ nonisolated struct ChatMessage: Identifiable, Codable, Sendable, Hashable {
     var searchFilters: SearchFilters?
     var tourRequest: TourRequest?
     var mortgageRequest: MortgageRequest?
+    var scriptedTourConfirmation: ScriptedTourConfirmation?
+    var scriptedMortgageConfirmation: ScriptedMortgageConfirmation?
     var isStreaming: Bool
     var isTourRoute: Bool
     var tourDayRoute: TourDayRoute?
@@ -74,6 +96,8 @@ nonisolated struct ChatMessage: Identifiable, Codable, Sendable, Hashable {
         searchFilters: SearchFilters? = nil,
         tourRequest: TourRequest? = nil,
         mortgageRequest: MortgageRequest? = nil,
+        scriptedTourConfirmation: ScriptedTourConfirmation? = nil,
+        scriptedMortgageConfirmation: ScriptedMortgageConfirmation? = nil,
         isStreaming: Bool = false,
         isTourRoute: Bool = false,
         tourDayRoute: TourDayRoute? = nil,
@@ -92,6 +116,8 @@ nonisolated struct ChatMessage: Identifiable, Codable, Sendable, Hashable {
         self.searchFilters = searchFilters
         self.tourRequest = tourRequest
         self.mortgageRequest = mortgageRequest
+        self.scriptedTourConfirmation = scriptedTourConfirmation
+        self.scriptedMortgageConfirmation = scriptedMortgageConfirmation
         self.isStreaming = isStreaming
         self.isTourRoute = isTourRoute
         self.tourDayRoute = tourDayRoute

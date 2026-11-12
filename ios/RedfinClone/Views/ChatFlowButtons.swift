@@ -11,13 +11,14 @@ struct TourRequestButton: View {
             isPresented = true
         } label: {
             Text("Request showing")
-                .font(.subheadline.bold())
+                .font(Theme.Typography.secondaryBold)
                 .foregroundStyle(Theme.Colors.invertedPrimary)
                 .padding(.horizontal, Theme.Spacing.md)
                 .padding(.vertical, Theme.ButtonSize.compactVerticalPadding)
                 .background(Color.primary, in: Capsule())
         }
-        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.leading, Theme.Spacing.md)
+        .padding(.trailing, Theme.Spacing.md + Theme.Spacing.xl)
         .fullScreenCover(isPresented: $isPresented) {
             TourBookingFlowView(tourRequest: tourRequest) { summary in
                 isPresented = false
@@ -38,13 +39,14 @@ struct MortgageRequestButton: View {
             isPresented = true
         } label: {
             Text("Estimate my rate")
-                .font(.subheadline.bold())
+                .font(Theme.Typography.secondaryBold)
                 .foregroundStyle(Theme.Colors.invertedPrimary)
                 .padding(.horizontal, Theme.Spacing.md)
                 .padding(.vertical, Theme.ButtonSize.compactVerticalPadding)
                 .background(Color.primary, in: Capsule())
         }
-        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.leading, Theme.Spacing.md)
+        .padding(.trailing, Theme.Spacing.md + Theme.Spacing.xl)
         .fullScreenCover(isPresented: $isPresented) {
             MortgagePrequalFlowView(mortgageRequest: mortgageRequest) { summary in
                 isPresented = false

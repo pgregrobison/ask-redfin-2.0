@@ -17,15 +17,15 @@ struct TourDayStopCard: View {
                             .font(.caption2.bold())
                             .foregroundStyle(.primary)
                         Text("Stop \(stopNumber) of \(totalStops) • \(time)")
-                            .font(.caption.weight(.semibold))
+                            .font(.nova(12, .demibold))
                             .foregroundStyle(.secondary)
                     }
                     Text(listing.address)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.nova(15, .demibold))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                     Text("\(listing.beds) bd • \(listing.bathsFormatted) ba • \(listing.formattedPrice)")
-                        .font(.caption)
+                        .font(Theme.Typography.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -39,7 +39,8 @@ struct TourDayStopCard: View {
             .clipShape(.rect(cornerRadius: Theme.Radius.medium))
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.leading, Theme.Spacing.md)
+        .padding(.trailing, Theme.Spacing.md + Theme.Spacing.xl)
         .transition(.asymmetric(
             insertion: .scale(scale: 0.92).combined(with: .opacity),
             removal: .opacity
@@ -70,7 +71,7 @@ struct TourDayStopCard: View {
                         .fill(Color.primary)
                         .frame(width: 22, height: 22)
                     Text("\(stopNumber)")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.nova(11, .demibold))
                         .foregroundStyle(Theme.Colors.invertedPrimary)
                 }
                 .padding(4)

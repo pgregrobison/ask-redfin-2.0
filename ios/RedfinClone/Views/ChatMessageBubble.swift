@@ -12,7 +12,6 @@ struct ChatMessageBubble: View {
     var onFlowConfirmed: (String) -> Void = { _ in }
     @Binding var carouselScrollPosition: String?
     var zoomNamespace: Namespace.ID?
-    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         if message.role == .user {
@@ -24,8 +23,8 @@ struct ChatMessageBubble: View {
 
     private var userBubble: some View {
         HStack {
-            Spacer(minLength: 60)
-            VStack(alignment: .trailing, spacing: 6) {
+            Spacer(minLength: 0)
+            VStack(alignment: .trailing, spacing: Theme.Spacing.xxs) {
                 if let attachments = message.attachments, !attachments.isEmpty {
                     ChatAttachmentGrid(attachments: attachments)
                         .frame(maxWidth: 280)
@@ -33,23 +32,47 @@ struct ChatMessageBubble: View {
                 if !message.content.isEmpty {
                     Text(message.content)
                         .font(Theme.Typography.body)
-                        .padding(.horizontal, Theme.Spacing.md)
-                        .padding(.vertical, Theme.Spacing.xs + 2)
-                        .background(userBubbleBackground)
-                        .clipShape(.rect(cornerRadius: Theme.Radius.chatBubble, style: .continuous))
+                        .lineSpacing(4)
+                        .padding(Theme.Spacing.sm)
+                        .background(Theme.Colors.inset)
+                        .clipShape(.rect(
+                            topLeadingRadius: Theme.Radius.large,
+                            bottomLeadingRadius: Theme.Radius.large,
+                            bottomTrailingRadius: 6,
+                            topTrailingRadius: Theme.Radius.large,
+                            style: .continuous
+                        ))
                 }
             }
         }
-        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.leading, Theme.Spacing.md + Theme.Spacing.xl)
+        .padding(.trailing, Theme.Spacing.md)
     }
 
     private var assistantBubble: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xs + 2) {
+        // Figma (node 395:999): message items within a received group stack at
+        // 12pt gaps; the thumbs action bar sits 8pt below the last item.
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            assistantContent
+
+            if message.role == .assistant && !message.content.isEmpty && !message.isStreaming {
+                feedbackButtons
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(.spring(response: 0.45, dampingFraction: 0.75), value: message.scriptedTourConfirmation)
+        .animation(.spring(response: 0.45, dampingFraction: 0.75), value: message.scriptedMortgageConfirmation)
+    }
+
+    private var assistantContent: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             if !message.content.isEmpty {
                 assistantContentText
                     .font(Theme.Typography.body)
+                    .lineSpacing(4)
                     .textSelection(.enabled)
-                    .padding(.horizontal, Theme.Spacing.md)
+                    .padding(.leading, Theme.Spacing.md)
+                    .padding(.trailing, Theme.Spacing.md + Theme.Spacing.xl)
             }
 
             if let searchResults = message.searchResults, !searchResults.isEmpty {
@@ -66,11 +89,17 @@ struct ChatMessageBubble: View {
                 )
             }
 
-            if let tourRequest = message.tourRequest {
+            if let confirmation = message.scriptedTourConfirmation {
+                ScriptedTourConfirmationCard(confirmation: confirmation, allListings: allListings)
+                    .transition(.scale(scale: 0.9).combined(with: .opacity))
+            } else if let tourRequest = message.tourRequest {
                 TourRequestButton(tourRequest: tourRequest, onCompleted: onFlowConfirmed)
             }
 
-            if let mortgageRequest = message.mortgageRequest {
+            if let confirmation = message.scriptedMortgageConfirmation {
+                ScriptedMortgagePrequalCard(confirmation: confirmation)
+                    .transition(.scale(scale: 0.9).combined(with: .opacity))
+            } else if let mortgageRequest = message.mortgageRequest {
                 MortgageRequestButton(mortgageRequest: mortgageRequest, onCompleted: onFlowConfirmed)
             }
 
@@ -93,12 +122,7 @@ struct ChatMessageBubble: View {
                     onTap: { onListingTap(listing) }
                 )
             }
-
-            if message.role == .assistant && !message.content.isEmpty && !message.isStreaming {
-                feedbackButtons
-            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var assistantContentText: Text {
@@ -114,32 +138,29 @@ struct ChatMessageBubble: View {
         return result
     }
 
-    private var userBubbleBackground: Color {
-        colorScheme == .dark
-            ? Theme.Colors.Chat.userBubbleDark
-            : Theme.Colors.Chat.userBubbleLight
-    }
-
+    // Figma: 20px icons with a 12px visual gap between them. Icons sit in
+    // 24pt frames (2pt overhang each side), so 8pt of stack spacing yields
+    // the 12px visual gap.
     private var feedbackButtons: some View {
         HStack(spacing: Theme.Spacing.xs) {
             Button { onFeedback(.thumbsUp) } label: {
                 Image(systemName: message.feedback == .thumbsUp ? "hand.thumbsup.fill" : "hand.thumbsup")
-                    .font(.system(size: Theme.IconSize.small, weight: .semibold))
+                    .font(.system(size: 18, weight: .medium))
                     .contentTransition(.symbolEffect(.replace))
                     .foregroundStyle(message.feedback == .thumbsUp ? .primary : Color.secondary.opacity(0.5))
-                    .frame(width: Theme.IconSize.smallTap, height: Theme.IconSize.smallTap)
-                    .contentShape(Rectangle())
+                    .frame(width: 24, height: 24)
+                    .contentShape(Rectangle().inset(by: -8))
             }
 
             Button { onFeedback(.thumbsDown) } label: {
                 Image(systemName: message.feedback == .thumbsDown ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-                    .font(.system(size: Theme.IconSize.small, weight: .semibold))
+                    .font(.system(size: 18, weight: .medium))
                     .contentTransition(.symbolEffect(.replace))
                     .foregroundStyle(message.feedback == .thumbsDown ? .primary : Color.secondary.opacity(0.5))
-                    .frame(width: Theme.IconSize.smallTap, height: Theme.IconSize.smallTap)
-                    .contentShape(Rectangle())
+                    .frame(width: 24, height: 24)
+                    .contentShape(Rectangle().inset(by: -8))
             }
         }
-        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.leading, Theme.Spacing.md)
     }
 }

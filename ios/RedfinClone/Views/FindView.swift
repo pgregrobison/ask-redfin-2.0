@@ -10,6 +10,7 @@ struct FindView: View {
     var showShimmer: Bool = false
     var accessoryMode: Bool = false
     var hideProfileButton: Bool = false
+    var hideListToggle: Bool = false
     @Environment(\.askRedfinContext) private var askRedfinContext
 
     var body: some View {
@@ -27,18 +28,15 @@ struct FindView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if isActive {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        viewModel.dismissOverlay()
-                        viewModel.showListView.toggle()
-                    } label: {
-                        Image(systemName: viewModel.showListView ? "map" : "list.bullet")
-                            .font(.system(size: Theme.IconSize.medium, weight: .semibold))
-                    }
-                }
-                if viewModel.showListView {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        sortMenu
+                if !hideListToggle {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            viewModel.dismissOverlay()
+                            viewModel.showListView.toggle()
+                        } label: {
+                            Image(systemName: viewModel.showListView ? "map" : "list.bullet")
+                                .font(.system(size: Theme.IconSize.medium, weight: .semibold))
+                        }
                     }
                 }
                 if !hideProfileButton {
@@ -61,25 +59,4 @@ struct FindView: View {
             askRedfinContext.context = viewModel.selectedListing != nil ? .mapCard : .map
         }
     }
-
-    private var sortMenu: some View {
-        Menu {
-            ForEach(SortOption.allCases, id: \.self) { option in
-                Button {
-                    viewModel.sortOption = option
-                } label: {
-                    HStack {
-                        Text(option.rawValue)
-                        if viewModel.sortOption == option {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
-            }
-        } label: {
-            Image(systemName: "arrow.up.arrow.down")
-                .font(.system(size: Theme.IconSize.medium, weight: .semibold))
-        }
-    }
-
 }
