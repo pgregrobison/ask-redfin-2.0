@@ -304,13 +304,16 @@ private struct AskEntryRow: View {
                 }
                 .foregroundStyle(Nova.Color.textSubtle)
                 if entry.linksDreamHome {
-                    HStack(spacing: 6) {
-                        NovaIcon("house", size: 16)
-                        Text("Saved to your dream home").font(Nova.Typography.caption12).underline()
+                    Button { session.tapCTA(AskCTA(label: "Open My home", kind: .myHome)) } label: {
+                        HStack(spacing: 6) {
+                            NovaIcon("house", size: 16)
+                            Text("Saved to your dream home").font(Nova.Typography.caption12).underline()
+                        }
+                        .foregroundStyle(Nova.Color.textSubtle)
                     }
-                    .foregroundStyle(Nova.Color.textSubtle)
+                    .buttonStyle(.plain)
                     .padding(.leading, 26)
-                    .accessibilityLabel("Saved to your dream home")
+                    .accessibilityHint("Opens My home")
                 }
             }
         case .work:

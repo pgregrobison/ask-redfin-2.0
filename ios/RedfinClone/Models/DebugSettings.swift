@@ -20,11 +20,6 @@ nonisolated enum FindChromeStyle: String, CaseIterable, Codable, Sendable {
     case searchBar = "Search Bar"
 }
 
-nonisolated enum OpenToOffersVariant: String, CaseIterable, Codable, Sendable {
-    case aggressive = "Aggressive"
-    case conservative = "Conservative"
-}
-
 @Observable
 class DebugSettings {
     /// Shared UserDefaults key for the "Launch Demo" toggle. `DemoFixtures.isEnabled`
@@ -52,9 +47,6 @@ class DebugSettings {
         didSet { UserDefaults.standard.set(launchDemoEnabled, forKey: Self.launchDemoKey) }
     }
 
-    var openToOffersVariant: OpenToOffersVariant = .aggressive
-    var otoIsActive: Bool = false
-    var resetDraftTrigger: Int = 0
 
     static let panDuration: Double = 0.35
     static let overlaySpringResponse: Double = 0.35

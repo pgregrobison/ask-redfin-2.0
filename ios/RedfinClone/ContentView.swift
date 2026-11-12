@@ -4,7 +4,6 @@ struct ContentView: View {
     @State private var viewModel: ListingsViewModel
     @State private var session: AskSession
     @State private var debugSettings = DebugSettings()
-    @State private var myHomeDraft = OTOSetupDraft()
     @State private var askRedfinContext = AskRedfinContextModel()
     @State private var selectedTab: AppTab = .find
 
@@ -70,6 +69,7 @@ struct ContentView: View {
                 }
                 viewModel.debugSettings = debugSettings
                 session.onOpenMyHome = { selectedTab = .myHome }
+                session.onShowFind = { navigationPath = NavigationPath(); selectedTab = .find }
             }
             .sheet(isPresented: $showDebugPanel) {
                 DebugPanelView(
@@ -187,7 +187,7 @@ struct ContentView: View {
             }
             Tab(value: AppTab.myHome) {
                 NavigationStack(path: $myHomePath) {
-                    MyHomeView(isActive: selectedTab == .myHome, onProfileTap: {}, hideProfileButton: true, ownsNavStack: true, debugSettings: debugSettings, setupDraft: myHomeDraft)
+                    DreamHomeView(session: session)
                 }
                 .tint(.primary)
             } label: {

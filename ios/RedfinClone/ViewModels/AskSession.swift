@@ -360,6 +360,29 @@ final class AskSession {
         return Array(Self.suggestionPool.filter { !asked.contains($0.lowercased()) }.shuffled().prefix(3))
     }
 
+    // MARK: - Dream Home
+
+    /// Switches to Find (set by ContentView).
+    var onShowFind: (() -> Void)?
+
+    /// "Find homes that match": runs the dream home as a search on the map,
+    /// narrated in the bar like a typed request.
+    func findDreamMatches() {
+        guard !isBusy else { return }
+        isChatOpen = false
+        onShowFind?()
+        listings.showListView = false
+        listings.dismissOverlay()
+        entries.append(AskEntry(kind: .user, text: "Find homes that match my dream home"))
+        syncLog()
+        let reply = router.findDream(listings.search)
+        run(reply, barSteps: reply.steps)
+        Task {
+            try? await Task.sleep(for: .seconds(1))
+            listings.fitListings(listings.filteredListings)
+        }
+    }
+
     // MARK: - Handoffs
 
     func tapCTA(_ cta: AskCTA) {

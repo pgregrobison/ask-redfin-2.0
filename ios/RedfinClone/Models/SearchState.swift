@@ -91,6 +91,8 @@ nonisolated struct SearchState: Codable, Hashable, Sendable {
     var hidden: Set<String> = []
     /// Homes the chat is pointing at (red pins).
     var highlighted: [String] = []
+    /// Dream Home name, timeline, buying power, alerts and inspiration.
+    var dream = DreamExtras()
 
     static let initial = SearchState()
 
@@ -209,9 +211,9 @@ nonisolated struct SearchState: Codable, Hashable, Sendable {
 
     /// "Start fresh": clears area, filters and criteria; keeps saved homes and tours.
     mutating func clearSearch() {
-        let keep = (tours, watches)
+        let keep = (tours, watches, dream)
         self = SearchState()
-        (tours, watches) = keep
+        (tours, watches, dream) = keep
     }
 }
 

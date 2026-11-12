@@ -1274,6 +1274,40 @@ final class AskRouter {
         return bot("", tools: ["Stopped watching " + (H(w.listingID).map(street) ?? "that home")], next: nx)
     }
 
+    /// "Find homes that match" on Dream Home: scours the listings with the
+    /// dream home's must-haves, dealbreakers and nice-to-haves.
+    func findDream(_ s: SearchState) -> AskReply {
+        let areas = AskText.joinAnd(s.locations.map { $0.replacingOccurrences(of: ", WA", with: "") })
+        let poolN = pool(s).count, must = s.dreamMustHaves.count, nice = s.dreamNiceToHaves.count, deal = s.dreamDealBreakers.count
+        let n = { (k: Int, one: String, many: String) in "\(k) " + (k == 1 ? one : many) }
+        var steps = ["Reading your dream home", "Scouring \(poolN) listings in \(areas)"]
+        if must > 0 { steps.append("Applying " + n(must, "must-have", "must-haves")) }
+        if deal > 0 { steps.append("Ruling out homes with " + (deal == 1 ? "a dealbreaker" : "dealbreakers")) }
+        if nice > 0 { steps.append("Scoring " + n(nice, "nice-to-have", "nice-to-haves")) }
+        steps.append("Ranking your best matches")
+
+        let nx = pruned(s), vis = visible(nx), N = vis.count
+        var r: AskReply
+        if N == 0 {
+            offer = expandOffer
+            r = bot("No homes in \(areas) fit your dream home yet. Want me to widen the area or loosen a must-have?", surface: true, next: nx)
+        } else {
+            let ranked = bestOf(vis, nx), top = ranked[0], x = top.x, m = nx.scoringCriteria.count, k = top.ok.count
+            lastHome = x.id
+            lastList = ranked.map(\.x.id)
+            let fit = m == 0 ? "" : ", which matches " + (m == 1 ? (k > 0 ? "your criterion" : "none of your criteria") : (k == m ? "all \(m)" : "\(k) of \(m)") + " of your criteria")
+            let text = "Found \(AskText.homes(N)) in \(areas) that fit your dream home" + (must > 0 ? ", each meeting " + (must == 1 ? "your must-have" : "all \(must) of your must-haves") : "")
+                + ". \(street(x)) (\(x.formattedPrice)) is the best fit\(fit)."
+            var hx = nx; hx.highlighted = [x.id]
+            r = bot(text, surface: true, tools: ["Matched homes to your dream home"], next: hx,
+                    sugs: ["Can I afford it?", "Homes like this one", "Tour \(street(x))"])
+        }
+        r.slow = true
+        r.steps = steps
+        r.workDone = "Searched \(poolN) listings"
+        return r
+    }
+
     /// Applies the "Set minimum" confirm from a size reaction.
     func setMinSqft(_ v: Int, _ s: SearchState) -> AskReply {
         var nx = s; nx.filters.minSqft = v
