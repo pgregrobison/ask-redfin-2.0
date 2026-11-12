@@ -3,7 +3,6 @@ import SwiftUI
 struct DebugPanelView: View {
     @Bindable var settings: DebugSettings
     var onPlaySplash: () -> Void = {}
-    var onRestartScriptedFlow: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -109,17 +108,10 @@ struct DebugPanelView: View {
                         onPlaySplash()
                     }
                     .foregroundStyle(Theme.Colors.brandRed)
-                    if DemoFixtures.isEnabled {
-                        Button("Restart Scripted Demo") {
-                            dismiss()
-                            onRestartScriptedFlow()
-                        }
-                        .foregroundStyle(Theme.Colors.brandRed)
-                    }
                 } header: {
                     Text("Launch Experience")
                 } footer: {
-                    Text("Launch Demo opens Ask Redfin into a fixed scripted conversation for recording, instead of your normal chat history and listings. Off = Original, untouched behavior. Takes effect next launch. Restart Scripted Demo resets the seed thread and replays the autoplay sequence from the top, without relaunching the app.")
+                    Text("Launch Demo adds the demo secret-room listing and keeps the Find location pinned to Seattle for recordings. Takes effect next launch.")
                 }
             }
             .navigationTitle("Debug")

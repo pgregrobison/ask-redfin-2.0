@@ -81,9 +81,7 @@ struct ContentView: View {
                             splashChromeOpacity = 0
                             showSplash = true
                         }
-                    },
-                    // The scripted demo thread is retired with the Vision chat.
-                    onRestartScriptedFlow: {}
+                    }
                 )
                 .presentationDetents([.medium, .large])
             }

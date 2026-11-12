@@ -35,18 +35,8 @@ struct AskChatSheet: View {
         .onChange(of: session.photoPickerRequested) { _, asked in
             if asked { session.photoPickerRequested = false; showPhotoPicker = true }
         }
-        .sheet(isPresented: Binding(get: { session.handoff.map { $0.kind == .tour || $0.kind == .rocket } ?? false },
-                                    set: { if !$0 { session.handoff = nil } })) {
-            handoffFlow
-        }
-        .alert("Connect with \(AskRouter.agentFirst)?", isPresented: Binding(get: { session.handoff?.kind == .agent }, set: { if !$0 { session.handoff = nil } })) {
-            Button("Request a call") {
-                session.logHandoff("Requested a call from \(AskRouter.agentName)",
-                                   reply: "\(AskRouter.agentFirst) will call you within one business day. They’ll see your search and criteria, so you won’t have to start over.")
-            }
-            Button("Not now", role: .cancel) { session.handoff = nil }
-        } message: {
-            Text("\(AskRouter.agentName) works with buyers in your search area and can tour homes with you and write offers.")
+        .sheet(isPresented: Binding(get: { session.handoff != nil }, set: { if !$0 { session.handoff = nil } })) {
+            if let cta = session.handoff { AskHandoffSheet(session: session, cta: cta) }
         }
         .photosPicker(isPresented: $showPhotoPicker, selection: $photoSelection, maxSelectionCount: 1, matching: .images)
         .onChange(of: photoSelection) { _, items in
@@ -68,26 +58,6 @@ struct AskChatSheet: View {
                 }
             }, onCancel: { showCamera = false })
             .ignoresSafeArea()
-        }
-    }
-
-    // MARK: Handoffs
-
-    /// The existing tour and prequal wizards (Phase 6 adds a summary step first).
-    @ViewBuilder
-    private var handoffFlow: some View {
-        if let cta = session.handoff {
-            let listing = cta.listingID.flatMap(session.listing)
-            switch cta.kind {
-            case .tour:
-                TourBookingFlowView(tourRequest: TourRequest(listingId: listing?.id, address: listing?.address)) { summary in
-                    session.logHandoff("Requested a tour of \(listing?.address ?? "this home")", reply: summary)
-                }
-            default:
-                MortgagePrequalFlowView(mortgageRequest: MortgageRequest(listingId: listing?.id)) { summary in
-                    session.logHandoff("Sent your pre-approval to Rocket", reply: summary)
-                }
-            }
         }
     }
 

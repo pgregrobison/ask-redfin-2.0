@@ -372,9 +372,13 @@ final class AskSession {
     }
 
     /// A finished handoff (tour booked, prequal done, agent call) is logged
-    /// like any other confirmation.
-    func logHandoff(_ tool: String, reply: String) {
+    /// like any other confirmation; a tour also joins your tours.
+    func completeHandoff(_ cta: AskCTA, tool: String, reply: String) {
         handoff = nil
+        if cta.kind == .tour, let id = cta.listingID {
+            listings.search.tours.removeAll { $0.listingID == id }
+            listings.search.tours.append(ScheduledTour(listingID: id, day: "Requested", time: ""))
+        }
         entries.append(AskEntry(kind: .tool, text: tool))
         entries.append(AskEntry(kind: .bot, text: reply))
         syncLog()
