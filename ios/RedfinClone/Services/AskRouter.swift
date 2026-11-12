@@ -1240,6 +1240,40 @@ final class AskRouter {
         }
     }
 
+    /// "Simulate a trigger" on a watch card: the price drops, it goes pending
+    /// or it schedules an open house; a tour watch also requests the tour.
+    func triggerWatch(_ w: HomeWatch, _ s: SearchState) -> AskReply {
+        guard let x = H(w.listingID) else { return AskReply(bot: "") }
+        let p0 = x.price
+        let np = w.condition == .price ? Int(floor(Double(w.value - 5000) / 5000)) * 5000 : Int((Double(p0) * 0.96 / 5000).rounded()) * 5000
+        let tour = w.action == .tour && w.condition != .pending
+        let lead: String
+        switch w.condition {
+        case .pending: lead = "\(street(x)) just went pending, so I stopped watching it."
+        case .openHouse: lead = "\(street(x)) scheduled an open house for Sunday, 1:00 to 3:00 PM."
+        case .price, .anyDrop:
+            lead = "Price drop on \(street(x)): it’s now $\(np.formatted()), down from \(x.formattedFullPrice)." + (w.condition == .price ? " That’s under your \(SearchState.money(w.value)) limit." : "")
+        }
+        let tail = tour ? " As you asked, I requested a tour for Saturday at 11:00 AM. A Redfin agent will confirm by text."
+            : w.condition == .pending ? " Want to see homes like it?" : " Want me to set up a tour?"
+        var nx = s
+        if let i = nx.watches.firstIndex(where: { $0.id == w.id }) { nx.watches[i].status = .hit }
+        if tour {
+            nx.tours.removeAll { $0.listingID == x.id }
+            nx.tours.append(ScheduledTour(listingID: x.id, day: "Saturday", time: "11:00 AM"))
+        }
+        lastHome = x.id
+        return bot(lead + tail, surface: true, tools: ["Watch triggered on \(street(x))"], next: nx,
+                   cta: !tour && w.condition != .pending ? AskCTA(label: "Schedule a tour", kind: .tour, listingID: x.id) : nil,
+                   widget: .homes([x.id], total: 1))
+    }
+
+    func stopWatch(_ w: HomeWatch, _ s: SearchState) -> AskReply {
+        var nx = s
+        if let i = nx.watches.firstIndex(where: { $0.id == w.id }) { nx.watches[i].status = .off }
+        return bot("", tools: ["Stopped watching " + (H(w.listingID).map(street) ?? "that home")], next: nx)
+    }
+
     /// Applies the "Set minimum" confirm from a size reaction.
     func setMinSqft(_ v: Int, _ s: SearchState) -> AskReply {
         var nx = s; nx.filters.minSqft = v

@@ -17,6 +17,11 @@ struct AskEntry: Identifiable, Equatable {
     var revealed: Int? = nil
     var cta: AskCTA? = nil
     var widget: AskWidget? = nil
+    /// Home cards attached under a reply, and how many homes "Show N on map" means.
+    var homes: [String] = []
+    var homesTotal = 0
+    /// What you've done with the widget (picked, reacted, used).
+    var widgetState = AskWidgetState()
 
     /// Criteria and memory confirmations link to the dream home.
     var linksDreamHome: Bool {
@@ -41,7 +46,7 @@ final class AskSession {
     /// The intent router; remembers what the conversation points at.
     let router: AskRouter
 
-    static let opensChatForAttachments = false
+    static let opensChatForAttachments = true
     static let greeting = "Hi! Tell me what you want in a home, in your own words."
     static let introQuery = "Homes in Seattle under $1.3M with natural light, a finished basement, a large yard, a home office and a quiet street"
     static let disclaimer = "This chat is powered by AI and may process your input to help improve our service. We do not sell your data. AI is occasionally inaccurate. Verify important information."
@@ -52,7 +57,7 @@ final class AskSession {
     ]
 
     // Conversation
-    private(set) var entries: [AskEntry] = []
+    var entries: [AskEntry] = []
     var draft = ""
     private(set) var suggestions: [String] = []
     private(set) var threadID = "t\(Int(Date.now.timeIntervalSince1970 * 1000))"
@@ -73,11 +78,20 @@ final class AskSession {
     /// The keyboard composer over the map.
     var isComposing = false
 
+    // Handoffs and pickers the chat sheet presents
+    /// A tapped CTA (tour, Rocket, agent); the chat sheet presents its flow.
+    var handoff: AskCTA?
+    /// The "Add a photo" widget asks the chat sheet to open the picker.
+    var photoPickerRequested = false
+    /// Switches to the My home tab ("Open My home").
+    var onOpenMyHome: (() -> Void)?
+
     // Feedback
     private(set) var feedbackAsk: (entryID: UUID, canUndo: Bool)?
     var feedbackFormEntry: UUID?
     private(set) var thanksToast = false
 
+    private var pendingHomes: ([String], Int) = ([], 0)
     private var toastTask: Task<Void, Never>?
     private var bubbleTask: Task<Void, Never>?
     private var feedbackTask: Task<Void, Never>?
@@ -196,6 +210,7 @@ final class AskSession {
         case nil: break
         }
 
+        let highlightedBefore = listings.search.highlighted
         var undo: SearchState.Snapshot?
         if let next = reply.next, next != listings.search {
             var snap: SearchState.Snapshot?
@@ -207,6 +222,18 @@ final class AskSession {
         if let w = reply.workDone { entries.append(AskEntry(kind: .work, text: w)) }
         isBusy = false
         showsStepper = false
+
+        // Home cards: the homes this reply pointed at, or the top of the
+        // results when it changed the search (the prototype's `bot.homes`).
+        var homes: [String] = [], homesTotal = 0
+        let hl = listings.search.highlighted
+        if case .homes = reply.widget {
+        } else if !hl.isEmpty && hl != highlightedBefore {
+            homes = Array(hl.prefix(8)); homesTotal = homes.count
+        } else if !reply.tools.isEmpty {
+            homes = listings.rankedResults.prefix(6).map(\.id); homesTotal = listings.rankedResults.count
+        }
+        pendingHomes = (homes, homesTotal)
 
         let tool = reply.tools.first
         guard !reply.bot.isEmpty else {
@@ -241,7 +268,9 @@ final class AskSession {
 
     @discardableResult
     private func appendBot(_ text: String, undo: SearchState.Snapshot?, streaming: Bool, cta: AskCTA? = nil, widget: AskWidget? = nil) -> UUID {
-        let e = AskEntry(kind: .bot, text: text, undo: undo, revealed: streaming ? 0 : nil, cta: cta, widget: widget)
+        var e = AskEntry(kind: .bot, text: text, undo: undo, revealed: streaming ? 0 : nil, cta: cta, widget: widget)
+        (e.homes, e.homesTotal) = pendingHomes
+        pendingHomes = ([], 0)
         entries.append(e)
         return e.id
     }
@@ -329,6 +358,26 @@ final class AskSession {
     private func freshSuggestions() -> [String] {
         let asked = Set(entries.filter { $0.kind == .user }.map { $0.text.lowercased() })
         return Array(Self.suggestionPool.filter { !asked.contains($0.lowercased()) }.shuffled().prefix(3))
+    }
+
+    // MARK: - Handoffs
+
+    func tapCTA(_ cta: AskCTA) {
+        if cta.kind == .myHome {
+            isChatOpen = false
+            onOpenMyHome?()
+        } else {
+            handoff = cta
+        }
+    }
+
+    /// A finished handoff (tour booked, prequal done, agent call) is logged
+    /// like any other confirmation.
+    func logHandoff(_ tool: String, reply: String) {
+        handoff = nil
+        entries.append(AskEntry(kind: .tool, text: tool))
+        entries.append(AskEntry(kind: .bot, text: reply))
+        syncLog()
     }
 
     // MARK: - Feedback
@@ -460,7 +509,7 @@ final class AskSession {
     // MARK: - Helpers
 
     /// Mirrors the conversation into the saved session (user/tool/bot only).
-    private func syncLog() {
+    func syncLog() {
         listings.askLog = entries.dropFirst().compactMap { e in
             switch e.kind {
             case .user: AskLogEntry(from: .user, text: e.text)

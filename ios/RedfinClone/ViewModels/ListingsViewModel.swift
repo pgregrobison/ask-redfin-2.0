@@ -48,6 +48,9 @@ class ListingsViewModel {
 
     /// Homes in the selected-home carousel: the tapped home plus its 9 nearest.
     private(set) var carouselListings: [Listing] = []
+    /// A planned tour day drawn on the map: stop IDs in route order.
+    var tourRoute: [String] = []
+
     /// How many list cards to show (pages of 24).
     var listPageCount = 1
     /// Snapshots taken before each undoable change, newest last.

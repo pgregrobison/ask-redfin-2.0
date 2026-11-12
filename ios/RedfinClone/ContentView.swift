@@ -69,6 +69,7 @@ struct ContentView: View {
                     showSplash = true
                 }
                 viewModel.debugSettings = debugSettings
+                session.onOpenMyHome = { selectedTab = .myHome }
             }
             .sheet(isPresented: $showDebugPanel) {
                 DebugPanelView(

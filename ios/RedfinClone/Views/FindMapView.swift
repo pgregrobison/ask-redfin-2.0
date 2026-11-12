@@ -84,7 +84,14 @@ struct FindMapView: View {
                 }
             }
 
-            ForEach(viewModel.filteredListings) { listing in
+            // A planned tour day: white casing under a brand-red line.
+            if viewModel.tourRoute.count > 1 {
+                let route = viewModel.tourRoute.compactMap { id in viewModel.listings.first { $0.id == id }?.coordinate }
+                MapPolyline(coordinates: route).stroke(.white, style: StrokeStyle(lineWidth: 7, lineCap: .round, lineJoin: .round))
+                MapPolyline(coordinates: route).stroke(Nova.Color.brandFixed, style: StrokeStyle(lineWidth: 3.5, lineCap: .round, lineJoin: .round))
+            }
+
+            ForEach(mapOrder) { listing in
                 Annotation(listing.id, coordinate: listing.coordinate, anchor: anchor(for: listing)) {
                     Button {
                         lastPinTap = .now
@@ -124,6 +131,14 @@ struct FindMapView: View {
         .allowsHitTesting(!showShimmer)
     }
 
+    /// Pins draw in order, so homes the chat points at, the selected home
+    /// and tour stops go last to stay on top.
+    private var mapOrder: [Listing] {
+        let front = Set(viewModel.search.highlighted + viewModel.tourRoute + [viewModel.selectedListing?.id].compactMap { $0 })
+        guard !front.isEmpty else { return viewModel.filteredListings }
+        return viewModel.filteredListings.filter { !front.contains($0.id) } + viewModel.filteredListings.filter { front.contains($0.id) }
+    }
+
     private var mapStyle: MapStyle {
         let elevation: MapStyle.Elevation = viewModel.isMap3D ? .realistic : .flat
         switch viewModel.mapStyle {
@@ -133,7 +148,7 @@ struct FindMapView: View {
     }
 
     private func isPill(_ listing: Listing) -> Bool {
-        viewModel.pillListingIDs.contains(listing.id)
+        viewModel.pillListingIDs.contains(listing.id) || viewModel.tourRoute.contains(listing.id)
     }
 
     private func anchor(for listing: Listing) -> UnitPoint {
@@ -142,8 +157,9 @@ struct FindMapView: View {
 
     private func pin(for listing: Listing) -> FindMapPin {
         let position = viewModel.analysisPositions[listing.id]
+        let stop = viewModel.tourRoute.firstIndex(of: listing.id)
         return FindMapPin(
-            label: listing.formattedPrice,
+            label: stop.map { "\($0 + 1) · \(listing.formattedPrice)" } ?? listing.formattedPrice,
             isPill: isPill(listing),
             isSelected: viewModel.selectedListing?.id == listing.id,
             isHighlighted: viewModel.search.highlighted.contains(listing.id),

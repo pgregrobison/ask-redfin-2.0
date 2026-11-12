@@ -32,6 +32,22 @@ struct AskChatSheet: View {
         .sheet(isPresented: Binding(get: { session.feedbackFormEntry != nil }, set: { if !$0 { session.feedbackFormEntry = nil } })) {
             AskFeedbackForm { reasons, details in session.sendFeedback(reasons: reasons, details: details) }
         }
+        .onChange(of: session.photoPickerRequested) { _, asked in
+            if asked { session.photoPickerRequested = false; showPhotoPicker = true }
+        }
+        .sheet(isPresented: Binding(get: { session.handoff.map { $0.kind == .tour || $0.kind == .rocket } ?? false },
+                                    set: { if !$0 { session.handoff = nil } })) {
+            handoffFlow
+        }
+        .alert("Connect with \(AskRouter.agentFirst)?", isPresented: Binding(get: { session.handoff?.kind == .agent }, set: { if !$0 { session.handoff = nil } })) {
+            Button("Request a call") {
+                session.logHandoff("Requested a call from \(AskRouter.agentName)",
+                                   reply: "\(AskRouter.agentFirst) will call you within one business day. They’ll see your search and criteria, so you won’t have to start over.")
+            }
+            Button("Not now", role: .cancel) { session.handoff = nil }
+        } message: {
+            Text("\(AskRouter.agentName) works with buyers in your search area and can tour homes with you and write offers.")
+        }
         .photosPicker(isPresented: $showPhotoPicker, selection: $photoSelection, maxSelectionCount: 1, matching: .images)
         .onChange(of: photoSelection) { _, items in
             guard let item = items.first else { return }
@@ -52,6 +68,26 @@ struct AskChatSheet: View {
                 }
             }, onCancel: { showCamera = false })
             .ignoresSafeArea()
+        }
+    }
+
+    // MARK: Handoffs
+
+    /// The existing tour and prequal wizards (Phase 6 adds a summary step first).
+    @ViewBuilder
+    private var handoffFlow: some View {
+        if let cta = session.handoff {
+            let listing = cta.listingID.flatMap(session.listing)
+            switch cta.kind {
+            case .tour:
+                TourBookingFlowView(tourRequest: TourRequest(listingId: listing?.id, address: listing?.address)) { summary in
+                    session.logHandoff("Requested a tour of \(listing?.address ?? "this home")", reply: summary)
+                }
+            default:
+                MortgagePrequalFlowView(mortgageRequest: MortgageRequest(listingId: listing?.id)) { summary in
+                    session.logHandoff("Sent your pre-approval to Rocket", reply: summary)
+                }
+            }
         }
     }
 
@@ -134,7 +170,16 @@ struct AskChatSheet: View {
             .defaultScrollAnchor(.bottom)
             .onChange(of: session.entries.count) { _, _ in scrollToBottom(proxy) }
             .onChange(of: session.isBusy) { _, _ in scrollToBottom(proxy) }
-            .onChange(of: session.entries.last?.revealed) { _, _ in proxy.scrollTo("bottom", anchor: .bottom) }
+            .onChange(of: session.entries.last?.revealed) { _, revealed in
+                proxy.scrollTo("bottom", anchor: .bottom)
+                // Widgets slide in after the text finishes; follow them down.
+                if revealed == nil {
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(350))
+                        scrollToBottom(proxy)
+                    }
+                }
+            }
         }
     }
 
@@ -305,6 +350,7 @@ private struct AskEntryRow: View {
             }
             .foregroundStyle(Nova.Color.textSubtle)
         case .bot:
+            VStack(alignment: .leading, spacing: 12) {
             Text(AskFormatting.attributed(entry.text, revealed: entry.revealed))
                 .lineSpacing(4)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -328,6 +374,12 @@ private struct AskEntryRow: View {
                         Button { session.retry() } label: { Label { Text("Try again") } icon: { Image("Nova/refresh") } }
                     }
                 }
+            // Widgets appear once the reply has finished typing.
+            if entry.revealed == nil && (!entry.homes.isEmpty || entry.widget != nil || entry.cta != nil) {
+                AskAttachments(session: session, entry: entry)
+            }
+            }
+            .animation(Nova.Motion.easeOut(), value: entry.revealed == nil)
         }
     }
 }
