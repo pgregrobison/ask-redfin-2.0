@@ -510,7 +510,8 @@ struct AskInspiration: View {
                             Text(tile.label)
                                 .font(Nova.Typography.label12).foregroundStyle(Nova.Color.text)
                                 .padding(.horizontal, 10).frame(height: 26)
-                                .novaGlass(in: Capsule())
+                                .background(Nova.Color.bgPrimary, in: Capsule())
+                                .novaElevation(.level1)
                                 .padding(8)
                         }
                         .overlay {

@@ -2,12 +2,11 @@ import SwiftUI
 
 // MARK: - Button
 
-/// Native buttons dressed in Nova: Liquid Glass on iOS 26 (bordered styles
-/// before), capsule, tinted Nova near-black, WNTL Text. The system supplies
-/// the press feel, disabled state and accessibility.
+/// Nova buttons for content (sections, cards, sheet bodies). Glass is
+/// reserved for native controls and floating chrome, so these never use it.
 ///
-/// - primary: `.glassProminent` / `.borderedProminent`
-/// - secondary: `.glass` / `.bordered`
+/// - primary: native `.borderedProminent`, solid Nova near-black capsule
+/// - secondary: Nova outline capsule (1.5pt near-black ring)
 /// - tertiary: `.borderless`
 /// - apply: prominent, tinted Nova green
 struct NovaButtonStyle: PrimitiveButtonStyle {
@@ -25,6 +24,16 @@ struct NovaButtonStyle: PrimitiveButtonStyle {
             }
         }
 
+        /// Nova heights: 32 / 40 / 48 / 56.
+        var height: CGFloat {
+            switch self {
+            case .xSmall: 32
+            case .small: 40
+            case .regular: 48
+            case .large: 56
+            }
+        }
+
         var font: Font {
             switch self {
             case .xSmall, .small: Nova.Typography.label14
@@ -38,32 +47,44 @@ struct NovaButtonStyle: PrimitiveButtonStyle {
     var fullWidth = false
 
     func makeBody(configuration: Configuration) -> some View {
-        let button = Button(role: configuration.role, action: configuration.trigger) {
-            configuration.label
-                .font(size.font)
-                .lineLimit(1)
-                .frame(maxWidth: fullWidth ? .infinity : nil)
-        }
-        .buttonBorderShape(.capsule)
-        .controlSize(size.controlSize)
-        .tint(variant == .apply ? Nova.Color.green700 : Nova.Color.gray800)
+        let label = configuration.label
+            .font(size.font)
+            .lineLimit(1)
+            .frame(maxWidth: fullWidth ? .infinity : nil)
 
         switch variant {
         case .primary, .apply:
-            if #available(iOS 26.0, *) {
-                button.buttonStyle(.glassProminent)
-            } else {
-                button.buttonStyle(.borderedProminent)
-            }
+            Button(role: configuration.role, action: configuration.trigger) { label }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .controlSize(size.controlSize)
+                .tint(variant == .apply ? Nova.Color.green700 : Nova.Color.gray800)
         case .secondary:
-            if #available(iOS 26.0, *) {
-                button.buttonStyle(.glass).foregroundStyle(Nova.Color.text)
-            } else {
-                button.buttonStyle(.bordered).foregroundStyle(Nova.Color.text)
-            }
+            Button(role: configuration.role, action: configuration.trigger) { label }
+                .buttonStyle(NovaOutlineButtonStyle(height: size.height))
         case .tertiary:
-            button.buttonStyle(.borderless).foregroundStyle(Nova.Color.text)
+            Button(role: configuration.role, action: configuration.trigger) { label }
+                .buttonStyle(.borderless)
+                .controlSize(size.controlSize)
+                .foregroundStyle(Nova.Color.text)
         }
+    }
+}
+
+/// Nova secondary: transparent capsule with a near-black ring and a press wash.
+private struct NovaOutlineButtonStyle: ButtonStyle {
+    let height: CGFloat
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(isEnabled ? Nova.Color.text : Nova.Color.gray400)
+            .padding(.horizontal, height >= 48 ? 20 : 16)
+            .frame(minHeight: height)
+            .background(configuration.isPressed ? Nova.Color.overlay : .clear, in: Capsule())
+            .overlay(Capsule().strokeBorder(isEnabled ? Nova.Color.text : Nova.Color.gray300, lineWidth: 1.5))
+            .contentShape(Capsule())
+            .animation(Nova.Motion.easeOut(), value: configuration.isPressed)
     }
 }
 

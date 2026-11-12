@@ -591,7 +591,7 @@ private struct InspirationPicker: View {
                 .overlay(alignment: .topTrailing) {
                     Group {
                         if on { NovaIcon("check", size: 16).foregroundStyle(.white).frame(width: 28, height: 28).background(Color(white: 0.067), in: Circle()) }
-                        else if !saved { NovaIcon("favorite", size: 16).foregroundStyle(Nova.Color.text).frame(width: 28, height: 28).novaGlass(in: Circle()) }
+                        else if !saved { NovaIcon("favorite", size: 16).foregroundStyle(Nova.Color.text).frame(width: 28, height: 28).background(Nova.Color.bgPrimary, in: Circle()).novaElevation(.level1) }
                     }
                     .padding(8)
                 }
