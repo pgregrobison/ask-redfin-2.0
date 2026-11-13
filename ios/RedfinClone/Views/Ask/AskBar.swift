@@ -43,6 +43,7 @@ struct AskBar: View {
                             .font(Nova.Typography.body16)
                             .foregroundStyle(session.draft.isEmpty ? Nova.Color.textSubtle : Nova.Color.text)
                             .lineLimit(1)
+                            .truncationMode(session.isPlayingIntro ? .head : .tail)
                             .id(placeholderIndex)
                             .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: 6)), removal: .opacity.combined(with: .offset(y: -6))))
                     }
@@ -55,7 +56,14 @@ struct AskBar: View {
             .buttonStyle(.plain)
             .accessibilityLabel(session.barToast.map(Self.accessibilityText) ?? "Ask Redfin")
             .accessibilityHint("Describe the home you want")
+
+            if session.isPlayingIntro && !session.draft.isEmpty {
+                IntroSendButton(phase: session.introPhase)
+                    .padding(.trailing, 4)
+                    .transition(.scale(scale: 0.6).combined(with: .opacity))
+            }
         }
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: session.isPlayingIntro && !session.draft.isEmpty)
         .padding(.horizontal, standalone ? 6 : 4)
         .frame(height: standalone ? 56 : nil)
         .background {
@@ -75,10 +83,12 @@ struct AskBar: View {
     }
 
     private var placeholder: String {
-        session.placeholders[placeholderIndex % session.placeholders.count]
+        if session.isPlayingIntro { return "Describe the home you want" }
+        return session.placeholders[placeholderIndex % session.placeholders.count]
     }
 
     private func startComposing() {
+        if session.isPlayingIntro { session.skipIntro(); return }
         guard !session.isBusy else { return }
         session.clearBubble()
         session.isComposing = true
@@ -205,6 +215,45 @@ struct AskComposer: View {
         }
         .onAppear { focused = true }
         .onChange(of: focused) { _, f in if !f { session.isComposing = false } }
+    }
+}
+
+/// The intro's send button: near-black while the request types, brand red
+/// as it's aimed at, then a press with a red ripple (the prototype's
+/// `sendBg` and `rx-ripple`).
+struct IntroSendButton: View {
+    let phase: AskSession.IntroPhase
+    @State private var ripple = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var fill: Color {
+        switch phase {
+        case .press: Nova.Color.brand600
+        case .aim: Nova.Color.brand500
+        default: Color(white: 0.067)
+        }
+    }
+
+    var body: some View {
+        NovaIcon("arrow_upward", size: 20)
+            .foregroundStyle(.white)
+            .frame(width: 36, height: 36)
+            .background(fill, in: Circle())
+            .background {
+                if phase == .press {
+                    Circle()
+                        .stroke(Nova.Color.brandFixed.opacity(ripple ? 0 : 0.55), lineWidth: ripple ? 2 : 10)
+                        .scaleEffect(ripple ? 2 : 1)
+                }
+            }
+            .scaleEffect(phase == .press ? 0.85 : 1)
+            .animation(.easeOut(duration: 0.2), value: phase)
+            .onChange(of: phase) { _, p in
+                guard p == .press, !reduceMotion else { return }
+                ripple = false
+                Task { @MainActor in withAnimation(.easeOut(duration: 0.7)) { ripple = true } }
+            }
+            .accessibilityHidden(true)
     }
 }
 

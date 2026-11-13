@@ -56,6 +56,7 @@ struct ContentView: View {
                     withAnimation(.easeInOut(duration: 0.5)) {
                         splashChromeOpacity = 1
                     }
+                    if session.introPhase == .pending { session.playIntro() }
                 }
                 .ignoresSafeArea()
             }
@@ -68,6 +69,10 @@ struct ContentView: View {
                     showSplash = true
                 }
                 viewModel.debugSettings = debugSettings
+                if debugSettings.playIntroQuery {
+                    session.prepareIntro()
+                    if !showSplash { session.playIntro() }
+                }
                 session.onOpenMyHome = { selectedTab = .myHome }
                 session.onShowFind = { navigationPath = NavigationPath(); selectedTab = .find }
             }
@@ -78,8 +83,19 @@ struct ContentView: View {
                         Task { @MainActor in
                             try? await Task.sleep(for: .milliseconds(350))
                             selectedTab = .find
+                            navigationPath = NavigationPath()
+                            if debugSettings.playIntroQuery { session.prepareIntro() }
                             splashChromeOpacity = 0
                             showSplash = true
+                        }
+                    },
+                    onPlayIntroQuery: {
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .milliseconds(350))
+                            selectedTab = .find
+                            navigationPath = NavigationPath()
+                            session.prepareIntro()
+                            session.playIntro()
                         }
                     }
                 )

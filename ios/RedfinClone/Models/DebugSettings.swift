@@ -47,6 +47,12 @@ class DebugSettings {
         didSet { UserDefaults.standard.set(launchDemoEnabled, forKey: Self.launchDemoKey) }
     }
 
+    /// Types the opening Seattle request into the Ask bar on launch, as the
+    /// prototype does. Off: the app opens with that search already applied.
+    static let playIntroKey = "debug_playIntroQuery"
+    var playIntroQuery: Bool {
+        didSet { UserDefaults.standard.set(playIntroQuery, forKey: Self.playIntroKey) }
+    }
 
     static let panDuration: Double = 0.35
     static let overlaySpringResponse: Double = 0.35
@@ -72,5 +78,6 @@ class DebugSettings {
         // Defaults to true (Launch Demo) until explicitly toggled, matching the
         // in-progress state of the launch-video work — not just a plain `false` default.
         self.launchDemoEnabled = (UserDefaults.standard.object(forKey: Self.launchDemoKey) as? Bool) ?? true
+        self.playIntroQuery = (UserDefaults.standard.object(forKey: Self.playIntroKey) as? Bool) ?? true
     }
 }

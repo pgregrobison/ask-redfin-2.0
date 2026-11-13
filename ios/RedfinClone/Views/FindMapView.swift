@@ -2,6 +2,7 @@ import SwiftUI
 import MapKit
 
 struct FindMapView: View {
+    @Environment(\.colorScheme) private var systemScheme
     @Bindable var viewModel: ListingsViewModel
     var zoomNamespace: Namespace.ID
     let onListingTap: (Listing) -> Void
@@ -112,7 +113,7 @@ struct FindMapView: View {
             }
         }
         .mapStyle(mapStyle)
-        .environment(\.colorScheme, viewModel.mapStyle == .dark ? .dark : .light)
+        .environment(\.colorScheme, mapScheme)
         .mapControls { }
         .onTapGesture {
             // Tapping empty map closes the card; ignore the tap a pin just handled.
@@ -137,6 +138,15 @@ struct FindMapView: View {
         let front = Set(viewModel.search.highlighted + viewModel.tourRoute + [viewModel.selectedListing?.id].compactMap { $0 })
         guard !front.isEmpty else { return viewModel.filteredListings }
         return viewModel.filteredListings.filter { !front.contains($0.id) } + viewModel.filteredListings.filter { front.contains($0.id) }
+    }
+
+    /// Streets follows the system appearance; Light and Dark are fixed.
+    private var mapScheme: ColorScheme {
+        switch viewModel.mapStyle {
+        case .streets: systemScheme
+        case .light: .light
+        case .dark: .dark
+        }
     }
 
     private var mapStyle: MapStyle {

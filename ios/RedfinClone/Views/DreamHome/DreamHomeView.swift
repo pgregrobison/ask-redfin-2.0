@@ -394,13 +394,13 @@ struct DreamHomeView: View {
         Button { session.findDreamMatches() } label: {
             ZStack(alignment: .bottomTrailing) {
                 NovaIcon("house", size: 26)
-                NovaIcon("search", size: 14).padding(2).background(Color(white: 0.067), in: Circle()).offset(x: 6, y: 4)
+                NovaIcon("search", size: 14).padding(2).background(Nova.Color.text, in: Circle()).offset(x: 6, y: 4)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Nova.Color.bgPrimary)
             .frame(width: 56, height: 56)
         }
         .buttonStyle(.plain)
-        .background(Color(white: 0.067), in: Circle())
+        .background(Nova.Color.text, in: Circle())
         .novaElevation(.level3)
         .padding(16)
         .accessibilityLabel("Find homes that match")
@@ -411,9 +411,9 @@ struct DreamHomeView: View {
     private var toastView: some View {
         if let toast {
             Text(toast)
-                .font(.nova(13)).foregroundStyle(.white)
+                .font(.nova(13)).foregroundStyle(Nova.Color.bgPrimary)
                 .padding(.horizontal, 14).padding(.vertical, 10)
-                .background(Color(white: 0.067), in: RoundedRectangle(cornerRadius: 12))
+                .background(Nova.Color.text, in: RoundedRectangle(cornerRadius: 12))
                 .novaElevation(.level3)
                 .padding(.bottom, 88)
                 .transition(.opacity.combined(with: .offset(y: 8)))
