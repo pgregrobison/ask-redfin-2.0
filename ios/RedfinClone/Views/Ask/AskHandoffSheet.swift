@@ -9,7 +9,7 @@ struct AskHandoffSheet: View {
     let cta: AskCTA
 
     @Environment(\.dismiss) private var dismiss
-    @State private var path: [Step] = []
+    @State private var path = NavigationPath()
 
     private enum Step: Hashable { case tourWizard, rocketWizard }
 
@@ -40,8 +40,6 @@ struct AskHandoffSheet: View {
             .safeAreaInset(edge: .bottom) { footer }
             .navigationDestination(for: Step.self) { step in
                 wizard(step)
-                    .navigationBarBackButtonHidden(true)
-                    .toolbar(.hidden, for: .navigationBar)
             }
         }
         .font(Nova.Typography.body16)
@@ -173,8 +171,8 @@ struct AskHandoffSheet: View {
 
     private func go() {
         switch cta.kind {
-        case .tour: path.append(.tourWizard)
-        case .rocket: path.append(.rocketWizard)
+        case .tour: path.append(Step.tourWizard)
+        case .rocket: path.append(Step.rocketWizard)
         default:
             let favs = session.listings.savedListingIDs.count
             session.completeHandoff(cta, tool: "Requested a call from \(AskRouter.agentName)",
@@ -187,12 +185,12 @@ struct AskHandoffSheet: View {
     private func wizard(_ step: Step) -> some View {
         switch step {
         case .tourWizard:
-            TourBookingFlowView(tourRequest: TourRequest(listingId: listing?.id, address: listing?.address)) { summary in
+            TourBookingFlowView(tourRequest: TourRequest(listingId: listing?.id, address: listing?.address), path: $path) { summary in
                 session.completeHandoff(cta, tool: "Requested a tour of \(listing?.address ?? "this home")", reply: summary)
                 dismiss()
             }
         case .rocketWizard:
-            MortgagePrequalFlowView(mortgageRequest: MortgageRequest(listingId: listing?.id)) { summary in
+            MortgagePrequalFlowView(mortgageRequest: MortgageRequest(listingId: listing?.id), path: $path) { summary in
                 session.completeHandoff(cta, tool: "Shared your search with Rocket Mortgage", reply: summary)
                 dismiss()
             }
