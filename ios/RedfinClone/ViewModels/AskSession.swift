@@ -311,6 +311,8 @@ final class AskSession {
         var homes: [String] = [], homesTotal = 0
         let hl = listings.search.highlighted
         if case .homes = reply.widget {
+        } else if let ids = reply.homes, !ids.isEmpty {
+            homes = ids; homesTotal = ids.count
         } else if !hl.isEmpty && hl != highlightedBefore {
             homes = Array(hl.prefix(8)); homesTotal = homes.count
         } else if !reply.tools.isEmpty {

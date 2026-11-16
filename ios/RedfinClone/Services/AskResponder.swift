@@ -15,6 +15,9 @@ struct AskReply {
     var suggestions: [String] = []
     /// The search after this turn (applied when the reply lands, undoable).
     var next: SearchState? = nil
+    /// Homes this reply lists, for the chat's home cards, when the list is too
+    /// broad to highlight on the map.
+    var homes: [String]? = nil
     var cta: AskCTA? = nil
     var widget: AskWidget? = nil
     /// Session-level actions the router can't do itself.
