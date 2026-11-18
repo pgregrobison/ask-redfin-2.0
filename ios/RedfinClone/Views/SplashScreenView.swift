@@ -30,13 +30,13 @@ struct SplashScreenView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                Theme.Colors.brandRed
+                Nova.Color.brandFixed
                     .ignoresSafeArea()
                     .opacity(redOpacity)
 
                 VStack(spacing: 0) {
                     Spacer()
-                    Theme.Colors.brandRed
+                    Nova.Color.brandFixed
                         .frame(height: geo.safeAreaInsets.bottom + 140)
                         .ignoresSafeArea(edges: .bottom)
                 }
@@ -80,13 +80,12 @@ struct SplashScreenView: View {
         let fg         = Color(white: 1.0 - pillProgress)
 
         return HStack(spacing: spacing) {
-            Image(systemName: "sparkle")
-                .font(.system(size: iconSize, weight: .semibold))
+            NovaIcon("star_shining", size: iconSize)
                 .foregroundStyle(fg)
 
             HStack(spacing: 2) {
                 Text(typedText)
-                    .font(.nova(fs))
+                    .font(.novaFixed(fs))
                     .foregroundStyle(fg)
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
@@ -106,31 +105,21 @@ struct SplashScreenView: View {
 
     // MARK: - Pill view (identical layout to AskRedfinAccessoryBar)
 
-    @ViewBuilder
+    /// Same layout as the Ask bar it hands off to: chevron, then the text.
     private func pillAccessoryView(screenW: CGFloat) -> some View {
-        let content = ZStack {
-            // Text centred — matches the accessory bar placeholder style
+        HStack(spacing: 4) {
+            NovaIcon("expand_less", size: 24)
+                .foregroundStyle(Nova.Color.text)
+                .frame(width: 44, height: 44)
             Text(fullText)
-                .font(Theme.Typography.body)
-                .foregroundStyle(.secondary)
+                .font(Nova.Typography.body16)
+                .foregroundStyle(Nova.Color.textSubtle)
                 .lineLimit(1)
-
-            // Sparkle at leading edge — matches the accessory bar icon position
-            HStack {
-                Image(systemName: "sparkle")
-                    .font(.system(size: Theme.ButtonSize.iconSize, weight: .semibold))
-                    .foregroundStyle(.primary)
-                Spacer()
-            }
-            .padding(.leading, Theme.Spacing.md)
+            Spacer(minLength: 12)
         }
+        .padding(.horizontal, 4)
         .frame(width: screenW - 32, height: 50)
-
-        if #available(iOS 26.0, *) {
-            content.glassEffect(in: .capsule)
-        } else {
-            content.background(.ultraThinMaterial, in: Capsule())
-        }
+        .novaGlass(in: Capsule())
     }
 
     // MARK: - Font sizing
@@ -138,11 +127,17 @@ struct SplashScreenView: View {
     private func computeFontSize(screenW: CGFloat) -> CGFloat {
         let target = screenW * 0.70
         for s in stride(from: CGFloat(16), through: CGFloat(120), by: CGFloat(0.5)) {
-            let f = UIFont.systemFont(ofSize: s)
+            let f = Self.novaUIFont(s)
             let w = ceil((sentence1 as NSString).size(withAttributes: [.font: f]).width)
             if w >= target { return s }
         }
         return 36
+    }
+
+    /// Measure with the face that's drawn (WNTL Text), not the system font,
+    /// or the pan undershoots and the tagline runs off the right edge.
+    private static func novaUIFont(_ size: CGFloat) -> UIFont {
+        UIFont(name: Font.NovaWeight.regular.postScriptName, size: size) ?? .systemFont(ofSize: size)
     }
 
     // MARK: - Pan
@@ -154,8 +149,8 @@ struct SplashScreenView: View {
         let spacing     = ceil(fs * 0.22)
         let leftMargin  = screenW * 0.08
         let targetX     = screenW * 0.90
-        let approxIconW = iconSize * 0.88
-        let font  = UIFont.systemFont(ofSize: fs)
+        let approxIconW = iconSize
+        let font  = Self.novaUIFont(fs)
         let textW = text.isEmpty ? 0 : ceil((text as NSString).size(withAttributes: [.font: font]).width)
         let cursorWorldX = leftMargin + approxIconW + spacing + textW
         withAnimation(.easeOut(duration: 0.08)) {

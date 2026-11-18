@@ -246,36 +246,6 @@ class ListingsViewModel {
         }
     }
 
-    func applyChatFilters(_ filters: SearchFilters, addNeighborhoods: Bool) {
-        if let v = filters.minBeds { filterMinBeds = v }
-        if let v = filters.minBaths { filterMinBaths = Int(v) }
-        if let v = filters.minPrice { filterMinPrice = v }
-        if let v = filters.maxPrice { filterMaxPrice = v }
-        if let v = filters.propertyType { filterPropertyType = v }
-        if filters.isHotHome == true { filterIsHotHome = true }
-        if let nbhds = filters.neighborhoods, !nbhds.isEmpty {
-            if addNeighborhoods {
-                var combined = filterNeighborhoods
-                for n in nbhds where !combined.contains(n) { combined.append(n) }
-                filterNeighborhoods = combined
-            } else {
-                filterNeighborhoods = nbhds
-            }
-        }
-    }
-
-    var currentSearchFilters: SearchFilters {
-        SearchFilters(
-            minBeds: filterMinBeds > 0 ? filterMinBeds : nil,
-            minBaths: filterMinBaths > 0 ? Double(filterMinBaths) : nil,
-            minPrice: filterMinPrice,
-            maxPrice: filterMaxPrice,
-            propertyType: filterPropertyType,
-            isHotHome: filterIsHotHome ? true : nil,
-            neighborhoods: filterNeighborhoods.isEmpty ? nil : filterNeighborhoods
-        )
-    }
-
     func fitNeighborhoods(_ names: [String], sheetFraction: CGFloat = 0) {
         let canonical = names.map { SearchRegions.shared.canonicalName($0) }
         if sheetFraction == 0, SearchRegions.shared.bounds(of: canonical) != nil {

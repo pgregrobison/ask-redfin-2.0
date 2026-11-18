@@ -94,6 +94,20 @@ final class AskRouter {
         return n
     }
 
+    /// Remembers a broad list for follow-ups ("which of those…") without
+    /// highlighting it: highlights are for narrow answers only.
+    private func listed(_ s: SearchState, _ ids: [String]) -> SearchState {
+        lastList = ids
+        return pruned(s)
+    }
+
+    /// Cards for a broad list (map highlights stay off).
+    private func withHomes(_ r: AskReply, _ ids: [String]) -> AskReply {
+        var r = r
+        if !ids.isEmpty { r.homes = Array(ids.prefix(8)) }
+        return r
+    }
+
     private func addRef(_ s: SearchState, id: String, label: String, _ xs: [Listing]) -> SearchState {
         var n = pruned(s)
         n.refinements.removeAll { $0.id == id }
@@ -209,13 +223,13 @@ final class AskRouter {
         if lo.rx(#"\b(good|great|best|ideal) for (a )?(famil(y|ies)|kids|children)\b|\b(family|kid)[- ]friendly\b"#) {
             let xs = vis.filter { $0.beds >= 3 && HomeCatalog.has($0, "large yard") }
             let text = "I can’t say who an area suits, but I can point to home features. " + (xs.isEmpty ? "None have both 3+ bedrooms and a large yard." : pre + "\(xs.count)" + (xs.count == 1 ? " home has" : " homes have") + " 3+ bedrooms and a large yard: " + list(xs) + ".") + " Want me to sort by distance to schools?"
-            return slow(["Checking bedrooms and yards", "Comparing homes"], N, bot(text, next: hi(s, xs.map(\.id), list: xs.map(\.id)), sugs: ["Sort by distance to schools", "Sort by distance to parks", "Does the cheapest one have a garage?"]))
+            return slow(["Checking bedrooms and yards", "Comparing homes"], N, withHomes(bot(text, next: listed(s, xs.map(\.id)), sugs: ["Sort by distance to schools", "Sort by distance to parks", "Does the cheapest one have a garage?"]), xs.map(\.id)))
         }
         if lo.rx(#"\b(good|great|best|better|fair) (deal|value|price)s?\b|\bunderpriced\b|\bbargains?\b|\bsteal\b|\boverpriced\b|\bworth (it|the price)\b"#) {
             let ss = lo.rx(#"sh(or|ro)t[- ]?sales?"#) ? vis.filter { $0.facts?.isShortSale == true } : []
-            var n = pruned(s); n.highlighted = ss.map(\.id)
+            let n = listed(s, ss.map(\.id))
             let text = (ss.isEmpty ? "" : "\(ss.count) of your results " + (ss.count == 1 ? "is a short sale" : "are short sales") + ": " + list(ss) + ". Short sales need lender approval, so closing often takes longer. ") + "I can’t say whether a home is a good deal. A Redfin agent can pull recent nearby sales so you can compare. I can also color pins by price per sq ft."
-            return fast(bot(text, surface: true, next: n, cta: AskCTA(label: "Connect with \(Self.agentFirst)", kind: .agent), sugs: ["Color pins by price per sq ft", "What’s the average price per sq ft?"]))
+            return fast(withHomes(bot(text, surface: true, next: n, cta: AskCTA(label: "Connect with \(Self.agentFirst)", kind: .agent), sugs: ["Color pins by price per sq ft", "What’s the average price per sq ft?"]), ss.map(\.id)))
         }
 
         // Structured filters with criteria: "3 beds under $1.2M with a yard".
@@ -352,7 +366,7 @@ final class AskRouter {
             let what = bad ? "need some work" : "are in good condition"
             let text = pre + (xs.isEmpty ? "None of the " + (cheap ? "lower-priced " : "") + "homes " + what + " based on their listings."
                 : "\(xs.count)" + (cheap ? " of the lower-priced homes " : " homes ") + what + " based on their listings: " + list(xs) + "." + (cheap ? " I counted homes under \(SearchState.money(Int((Double(med) / 1000).rounded()) * 1000)) as lower priced." : ""))
-            return slow(["Reading listing details", "Comparing condition"], N, bot(text, next: hi(s, xs.map(\.id), list: xs.map(\.id)), sugs: ["Which of those is the biggest?", "Does the cheapest one have a garage?", "Sort by price per sq ft"]))
+            return slow(["Reading listing details", "Comparing condition"], N, withHomes(bot(text, next: listed(s, xs.map(\.id)), sugs: ["Which of those is the biggest?", "Does the cheapest one have a garage?", "Sort by price per sq ft"]), xs.map(\.id)))
         }
 
         if lo.rx(#"\b(average|avg|mean|median|typical)\b"#) { return slow(["Pulling listing data", "Calculating"], N, averages(lo, vis, s, pre: pre)) }
@@ -853,9 +867,9 @@ final class AskRouter {
                     : "\(xs.count) of the \(N) homes in your results mention \(Self.phrase[kc] ?? kc): " + shown.joined(separator: ", ") + (xs.count > 4 ? " and \(xs.count - 4) more" : "") + "."
                 text += " Listings either mention it or don’t, so I can’t rank homes by how much of it they have." + (known ? "" : " Want me to add “\(kc)” to your criteria?")
                 if !known { offer = { [weak self] st in self?.fast(self?.applyAsk(st, crits: [kc]) ?? AskReply(bot: "")) ?? AskReply(bot: "") } }
-                var nx = s
-                if !xs.isEmpty { nx.highlighted = xs.prefix(8).map(\.id); lastList = xs.map(\.id) }
-                return bot(text, surface: true, next: nx, sugs: ["Which has the biggest basement?", "Which has the most bedrooms?", "Which one fits me best?"])
+                var nx = pruned(s)
+                if !xs.isEmpty { nx = listed(s, xs.map(\.id)) }
+                return withHomes(bot(text, surface: true, next: nx, sugs: ["Which has the biggest basement?", "Which has the most bedrooms?", "Which one fits me best?"]), xs.map(\.id))
             }
             return bot((rankQ ? "I can’t rank homes by that, since the listings don’t include it. " : "I’m not sure I can answer that from the listings. ") + "I can compare homes on price, size, beds, baths, lot size, basement, garage, year built, HOA and time on Redfin, or color pins by distance to parks, schools and transit.",
                        surface: true, sugs: ["Which has the biggest basement?", "Which has the most bedrooms?", "Which has the biggest lot?"])
@@ -993,7 +1007,9 @@ final class AskRouter {
                 let fav = catalog.filter { favs.contains($0.id) }, hlL = s.highlighted.compactMap(H)
                 let base: [Listing] = lo.rx(#"\b(saved|favou?rites?|hearted)\b"#) && fav.count >= 2 ? fav
                     : lo.rx(#"\b(tour|toured|stops|itinerary)\b"#) && listFrom().count >= 2 ? listFrom().compactMap(H)
-                    : hlL.count >= 2 ? hlL : fav.count >= 2 ? fav : ranked()
+                    : hlL.count >= 2 ? hlL
+                    : lo.rx(#"\b(these|those|them|they)\b"#) && lastList.compactMap(H).count >= 2 ? lastList.compactMap(H)
+                    : fav.count >= 2 ? fav : ranked()
                 for b in base where !xs.contains(b) { xs.append(b) }
             }
             let nW = Int(lo.groups(#"\b([2-4])\b"#)?[1] ?? "") ?? 0
@@ -1274,6 +1290,39 @@ final class AskRouter {
         return bot("", tools: ["Stopped watching " + (H(w.listingID).map(street) ?? "that home")], next: nx)
     }
 
+    /// "Find homes that match" on Dream Home: scours the listings with the
+    /// dream home's must-haves, dealbreakers and nice-to-haves.
+    func findDream(_ s: SearchState) -> AskReply {
+        let areas = AskText.joinAnd(s.locations.map { $0.replacingOccurrences(of: ", WA", with: "") })
+        let poolN = pool(s).count, must = s.dreamMustHaves.count, nice = s.dreamNiceToHaves.count, deal = s.dreamDealBreakers.count
+        let n = { (k: Int, one: String, many: String) in "\(k) " + (k == 1 ? one : many) }
+        var steps = ["Reading your dream home", "Scouring \(poolN) listings in \(areas)"]
+        if must > 0 { steps.append("Applying " + n(must, "must-have", "must-haves")) }
+        if deal > 0 { steps.append("Ruling out homes with " + (deal == 1 ? "a dealbreaker" : "dealbreakers")) }
+        if nice > 0 { steps.append("Scoring " + n(nice, "nice-to-have", "nice-to-haves")) }
+        steps.append("Ranking your best matches")
+
+        let nx = pruned(s), vis = visible(nx), N = vis.count
+        var r: AskReply
+        if N == 0 {
+            offer = expandOffer
+            r = bot("No homes in \(areas) fit your dream home yet. Want me to widen the area or loosen a must-have?", surface: true, next: nx)
+        } else {
+            let ranked = bestOf(vis, nx), top = ranked[0], x = top.x, m = nx.scoringCriteria.count, k = top.ok.count
+            lastHome = x.id
+            lastList = ranked.map(\.x.id)
+            let fit = m == 0 ? "" : ", which matches " + (m == 1 ? (k > 0 ? "your criterion" : "none of your criteria") : (k == m ? "all \(m)" : "\(k) of \(m)") + " of your criteria")
+            let text = "Found \(AskText.homes(N)) in \(areas) that fit your dream home" + (must > 0 ? ", each meeting " + (must == 1 ? "your must-have" : "all \(must) of your must-haves") : "")
+                + ". \(street(x)) (\(x.formattedPrice)) is the best fit\(fit)."
+            r = bot(text, surface: true, tools: ["Matched homes to your dream home"], next: nx,
+                    sugs: ["Can I afford it?", "Homes like this one", "Tour \(street(x))"])
+        }
+        r.slow = true
+        r.steps = steps
+        r.workDone = "Searched \(poolN) listings"
+        return r
+    }
+
     /// Applies the "Set minimum" confirm from a size reaction.
     func setMinSqft(_ v: Int, _ s: SearchState) -> AskReply {
         var nx = s; nx.filters.minSqft = v
@@ -1300,10 +1349,10 @@ final class AskRouter {
         var nx = pruned(s)
         nx.refinements.removeAll { $0.id == "photo" }
         nx.refinements.append(SearchRefinement(id: "photo", label: "Looks like your photo", listingIDs: xs.map(\.id)))
-        nx.highlighted = xs.prefix(8).map(\.id)
         lastList = xs.map(\.id)
         var r = bot((hasPhoto ? "Your photo shows " : "That look is ") + st.text + ". \(AskText.homes(xs.count)) in your results " + (xs.count == 1 ? "has" : "have") + " a similar look.",
                     tools: ["Matched homes to your photo"], next: nx, sugs: ["Compare the top 3", "Plan a tour day for these"])
+        r.homes = Array(xs.prefix(8).map(\.id))
         r.slow = true
         r.steps = ["Looking at your photo", "Finding homes with a similar look"]
         r.workDone = "Checked your results"

@@ -122,6 +122,88 @@ final class AskSession {
         syncLog()
     }
 
+    // MARK: - Intro
+
+    /// The prototype's auto-played opening: the request types itself into the
+    /// Ask bar, the send button lights up and presses, and it runs like any
+    /// other request.
+    enum IntroPhase { case idle, pending, typing, aim, press }
+    private(set) var introPhase: IntroPhase = .idle
+    private var introTask: Task<Void, Never>?
+    var isPlayingIntro: Bool { introPhase != .idle }
+
+    /// Clears the search and chat back to the empty Seattle map, ready for
+    /// `playIntro()` (run straight away, or once the splash hands off).
+    func prepareIntro() {
+        introTask?.cancel()
+        guard !isBusy else { return }
+        listings.showChat = false
+        listings.search.clearSearch()
+        entries = [AskEntry(kind: .bot, text: Self.greeting)]
+        suggestions = []
+        draft = ""
+        isComposing = false
+        clearBubble()
+        syncLog()
+        introPhase = .pending
+    }
+
+    func playIntro() {
+        if introPhase == .idle { prepareIntro() }
+        guard introPhase == .pending else { return }
+        introPhase = .typing
+        let query = Self.introQuery
+        introTask = Task {
+            let reduce = UIAccessibility.isReduceMotionEnabled
+            try? await Task.sleep(for: .milliseconds(1200))
+            if reduce {
+                draft = query
+                try? await Task.sleep(for: .milliseconds(600))
+            } else {
+                for (i, ch) in query.enumerated() {
+                    guard !Task.isCancelled else { return }
+                    draft.append(ch)
+                    let ms = 26 + (ch == " " ? 30 : 0) + (ch == "," ? 160 : 0) + ((i + 1) * 37) % 17
+                    try? await Task.sleep(for: .milliseconds(ms))
+                }
+            }
+            guard !Task.isCancelled else { return }
+            try? await Task.sleep(for: .milliseconds(450))
+            introPhase = .aim
+            try? await Task.sleep(for: .milliseconds(reduce ? 300 : 750))
+            guard !Task.isCancelled else { return }
+            introPhase = .press
+            try? await Task.sleep(for: .milliseconds(320))
+            guard !Task.isCancelled else { return }
+            finishIntro()
+        }
+    }
+
+    /// Tapping the bar mid-intro skips to sending the request.
+    func skipIntro() {
+        guard introPhase != .idle else { return }
+        introTask?.cancel()
+        finishIntro()
+    }
+
+    /// Lands the prototype's `filled()` turn rather than routing the query,
+    /// so the opening reads exactly as designed.
+    private func finishIntro() {
+        introPhase = .idle
+        draft = ""
+        entries.append(AskEntry(kind: .user, text: Self.introQuery))
+        syncLog()
+        var next = listings.search
+        next.filters.maxPrice = SearchState.introScenario.filters.maxPrice
+        next.criteria = SearchState.introScenario.criteria
+        let n = SearchEngine.results(listings.listings, next).count
+        var reply = AskReply(bot: "Here are \(n) homes in Seattle under $1.3M, ranked by how many of your \(next.criteria.count) criteria they match.")
+        reply.tools = ["Set price to up to $1.3M and added \(next.criteria.count) criteria"]
+        reply.next = next
+        reply.suggestions = Array(Self.suggestionPool.prefix(3))
+        run(reply, barSteps: ["Understanding your request", "Adjusting your price range", "Matching homes to what you asked", "Updating results"])
+    }
+
     // MARK: - Sending
 
     func submitDraft() {
@@ -132,6 +214,7 @@ final class AskSession {
 
     func send(_ text: String, photo: URL? = nil) {
         guard !isBusy else { return }
+        if introPhase != .idle { introTask?.cancel(); introPhase = .idle }
         draft = ""
         isComposing = false
         suggestions = []
@@ -228,6 +311,8 @@ final class AskSession {
         var homes: [String] = [], homesTotal = 0
         let hl = listings.search.highlighted
         if case .homes = reply.widget {
+        } else if let ids = reply.homes, !ids.isEmpty {
+            homes = ids; homesTotal = ids.count
         } else if !hl.isEmpty && hl != highlightedBefore {
             homes = Array(hl.prefix(8)); homesTotal = homes.count
         } else if !reply.tools.isEmpty {
@@ -360,6 +445,29 @@ final class AskSession {
         return Array(Self.suggestionPool.filter { !asked.contains($0.lowercased()) }.shuffled().prefix(3))
     }
 
+    // MARK: - Dream Home
+
+    /// Switches to Find (set by ContentView).
+    var onShowFind: (() -> Void)?
+
+    /// "Find homes that match": runs the dream home as a search on the map,
+    /// narrated in the bar like a typed request.
+    func findDreamMatches() {
+        guard !isBusy else { return }
+        isChatOpen = false
+        onShowFind?()
+        listings.showListView = false
+        listings.dismissOverlay()
+        entries.append(AskEntry(kind: .user, text: "Find homes that match my dream home"))
+        syncLog()
+        let reply = router.findDream(listings.search)
+        run(reply, barSteps: reply.steps)
+        Task {
+            try? await Task.sleep(for: .seconds(1))
+            listings.fitListings(listings.filteredListings)
+        }
+    }
+
     // MARK: - Handoffs
 
     func tapCTA(_ cta: AskCTA) {
@@ -372,9 +480,13 @@ final class AskSession {
     }
 
     /// A finished handoff (tour booked, prequal done, agent call) is logged
-    /// like any other confirmation.
-    func logHandoff(_ tool: String, reply: String) {
+    /// like any other confirmation; a tour also joins your tours.
+    func completeHandoff(_ cta: AskCTA, tool: String, reply: String) {
         handoff = nil
+        if cta.kind == .tour, let id = cta.listingID {
+            listings.search.tours.removeAll { $0.listingID == id }
+            listings.search.tours.append(ScheduledTour(listingID: id, day: "Requested", time: ""))
+        }
         entries.append(AskEntry(kind: .tool, text: tool))
         entries.append(AskEntry(kind: .bot, text: reply))
         syncLog()
